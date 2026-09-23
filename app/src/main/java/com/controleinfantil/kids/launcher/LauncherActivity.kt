@@ -8,7 +8,9 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.controleinfantil.kids.R
@@ -18,6 +20,8 @@ import com.controleinfantil.kids.schedule.checkRules
 import com.controleinfantil.kids.setup.GuardianArea
 import com.controleinfantil.kids.setup.SetupActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -29,6 +33,7 @@ class LauncherActivity : AppCompatActivity() {
 
     private lateinit var kiosk: KioskManager
     private lateinit var recycler: RecyclerView
+    private var showingBlocked = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,6 +47,18 @@ class LauncherActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.header).setOnLongClickListener {
             startActivity(Intent(this, SetupActivity::class.java))
             true
+        }
+
+        // Enquanto a criança está no launcher, reavalia as regras de tempos em
+        // tempos: a janela de uso pode abrir ou o responsável pode liberar tempo
+        // pelo painel, e o aviso de descanso não pode ficar preso na tela.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (isActive) {
+                    delay(RULES_RECHECK_MS)
+                    if (checkRules(this@LauncherActivity).blocked != showingBlocked) refreshApps()
+                }
+            }
         }
     }
 
@@ -57,6 +74,7 @@ class LauncherActivity : AppCompatActivity() {
     private fun refreshApps() {
         // Fora do horário, nem carrega a lista: a criança vê o aviso de descanso.
         val verdict = checkRules(this)
+        showingBlocked = verdict.blocked
         val blockedView = findViewById<TextView>(R.id.blockedHint)
         val emptyView = findViewById<TextView>(R.id.emptyHint)
         if (verdict.blocked) {
@@ -87,6 +105,10 @@ class LauncherActivity : AppCompatActivity() {
         is Verdict.BudgetSpent ->
             getString(R.string.blocked_budget_spent, verdict.limitMinutes)
         Verdict.Allowed -> ""
+    }
+
+    private companion object {
+        const val RULES_RECHECK_MS = 30_000L
     }
 
     private class AppsAdapter(

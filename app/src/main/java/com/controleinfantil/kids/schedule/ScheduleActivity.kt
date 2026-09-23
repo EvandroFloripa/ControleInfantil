@@ -3,6 +3,7 @@ package com.controleinfantil.kids.schedule
 import android.app.TimePickerDialog
 import android.os.Bundle
 import android.view.View
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CompoundButton
@@ -29,11 +30,21 @@ class ScheduleActivity : GuardianActivity() {
         setContentView(R.layout.activity_schedule)
         rules = TimeRules.load(this)
 
-        findViewById<Spinner>(R.id.limitSpinner).adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            limitOptions.map { if (it == 0) getString(R.string.limit_none) else formatDuration(it) },
-        )
+        findViewById<Spinner>(R.id.limitSpinner).apply {
+            adapter = ArrayAdapter(
+                this@ScheduleActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                limitOptions.map { if (it == 0) getString(R.string.limit_none) else formatDuration(it) },
+            )
+            // Guarda a escolha em `rules` na hora: render() reposiciona o spinner a
+            // partir de `rules`, e sem isto a escolha se perderia antes de salvar.
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) {
+                    rules = rules.copy(dailyLimitMinutes = limitOptions[pos])
+                }
+                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+            }
+        }
 
         findViewById<SwitchCompat>(R.id.switchEnabled)
             .setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
@@ -57,8 +68,7 @@ class ScheduleActivity : GuardianActivity() {
             render()
         }
         findViewById<Button>(R.id.btnSave).setOnClickListener {
-            val pos = findViewById<Spinner>(R.id.limitSpinner).selectedItemPosition
-            TimeRules.save(this, rules.copy(dailyLimitMinutes = limitOptions[pos]))
+            TimeRules.save(this, rules)
             finish()
         }
 

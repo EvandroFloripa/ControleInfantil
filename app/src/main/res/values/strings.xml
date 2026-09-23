@@ -55,7 +55,7 @@
     <string name="pin_too_short">O PIN precisa ter pelo menos %1$d números.</string>
     <string name="pin_mismatch">Os dois PINs não são iguais.</string>
     <string name="pin_wrong">PIN incorreto.</string>
-    <string name="pin_too_many">Muitas tentativas. Tente de novo.</string>
+    <string name="pin_too_many">Muitas tentativas. Tente de novo em %1$s.</string>
 
     <!-- Limites de horário -->
     <string name="schedule_button">Limites de horário</string>
@@ -66,6 +66,7 @@
     <string name="schedule_to">Até as %1$s</string>
     <string name="schedule_limit_label">Tempo máximo por dia</string>
     <string name="limit_none">Sem limite de tempo</string>
+    <string name="duration_seconds">%1$d s</string>
     <string name="duration_minutes">%1$d min</string>
     <string name="duration_hours">%1$dh</string>
     <string name="duration_hours_minutes">%1$dh%2$02d</string>

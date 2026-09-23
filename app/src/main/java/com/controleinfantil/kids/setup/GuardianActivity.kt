@@ -21,7 +21,6 @@ import com.controleinfantil.kids.R
 abstract class GuardianActivity : AppCompatActivity() {
 
     private var pinDialog: AlertDialog? = null
-    private var wrongAttempts = 0
 
     override fun onResume() {
         super.onResume()
@@ -46,6 +45,12 @@ abstract class GuardianActivity : AppCompatActivity() {
 
     private fun askForPin() {
         val creating = !GuardianPin.isSet(this)
+        val locked = GuardianPin.lockoutRemainingMs(this)
+        if (!creating && locked > 0) {
+            toast(getString(R.string.pin_too_many, waitText(locked)))
+            finish()
+            return
+        }
         val view = layoutInflater.inflate(R.layout.dialog_pin, null)
         val input = view.findViewById<EditText>(R.id.pinInput)
         val confirm = view.findViewById<EditText>(R.id.pinConfirm)
@@ -89,18 +94,32 @@ abstract class GuardianActivity : AppCompatActivity() {
     }
 
     private fun submitPin(input: EditText) {
+        // Pode ter travado enquanto o diálogo estava aberto (outra tela errou antes).
+        val locked = GuardianPin.lockoutRemainingMs(this)
+        if (locked > 0) {
+            toast(getString(R.string.pin_too_many, waitText(locked)))
+            finish()
+            return
+        }
         if (GuardianPin.verify(this, input.text.toString())) {
+            GuardianPin.clearFailures(this)
             unlock()
             return
         }
         input.text.clear()
-        wrongAttempts++
-        if (wrongAttempts >= MAX_ATTEMPTS) {
-            toast(getString(R.string.pin_too_many))
+        val lockout = GuardianPin.registerFailure(this)
+        if (lockout > 0) {
+            toast(getString(R.string.pin_too_many, waitText(lockout)))
             finish()
         } else {
             toast(getString(R.string.pin_wrong))
         }
+    }
+
+    private fun waitText(ms: Long): String {
+        val seconds = (ms + 999) / 1000
+        return if (seconds < 60) getString(R.string.duration_seconds, seconds.toInt())
+        else getString(R.string.duration_minutes, ((seconds + 59) / 60).toInt())
     }
 
     private fun unlock() {
@@ -111,10 +130,6 @@ abstract class GuardianActivity : AppCompatActivity() {
 
     private fun toast(message: String) =
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-
-    private companion object {
-        const val MAX_ATTEMPTS = 5
-    }
 }
 
 /**

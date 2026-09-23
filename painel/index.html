@@ -263,7 +263,11 @@ async function withAuth(doFetch) {
   return resp;
 }
 
+let expiring = false;
 function sessionExpired() {
+  // Várias chamadas em paralelo podem receber 401 juntas; avisa uma vez só.
+  if (expiring) return;
+  expiring = true;
   toast('Sessão expirada. Entre novamente.');
   sessionStorage.clear();
   setTimeout(() => location.reload(), 1500);
@@ -287,7 +291,11 @@ async function rpc(fn, args) {
 async function select(path) {
   const resp = await withAuth(
     () => fetch(state.url + '/rest/v1/' + path, { headers: authHeaders() }));
-  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  if (!resp.ok) {
+    // 401 aqui significa que nem a renovação resolveu.
+    if (resp.status === 401) { sessionExpired(); throw new Error('Sessão expirada.'); }
+    throw new Error('HTTP ' + resp.status);
+  }
   return resp.json();
 }
 
@@ -405,9 +413,8 @@ async function loadDevices() {
          .forEach(l => { state.roles[l.device_id] = l.role; });
     renderDevices();
   } catch (e) {
-    // 401 aqui significa que nem a renovação resolveu.
-    if (String(e.message).includes('401')) sessionExpired();
-    else toast('Erro ao carregar: ' + e.message);
+    // A sessão expirada já foi avisada por select().
+    if (!expiring) toast('Erro ao carregar: ' + e.message);
   }
 }
 

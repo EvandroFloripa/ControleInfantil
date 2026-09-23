@@ -26,6 +26,12 @@ object GuardianPin {
     private const val KEY_LENGTH_BITS = 256
     const val MIN_LENGTH = 4
 
+    private const val KEY_FAILURES = "pin_failures"
+    private const val KEY_LOCKED_UNTIL = "pin_locked_until"
+    const val MAX_ATTEMPTS = 5
+    private const val BASE_LOCKOUT_MS = 30_000L
+    private const val MAX_LOCKOUT_MS = 60 * 60_000L
+
     fun isSet(context: Context): Boolean =
         prefs(context).contains(KEY_HASH)
 
@@ -42,6 +48,42 @@ object GuardianPin {
         val salt = p.getString(KEY_SALT, null)?.let(::decode) ?: return false
         val expected = p.getString(KEY_HASH, null)?.let(::decode) ?: return false
         return constantTimeEquals(derive(pin, salt), expected)
+    }
+
+    /**
+     * Quanto falta, em ms, para aceitar o PIN de novo (0 = liberado).
+     *
+     * A contagem fica gravada, e não na tela: se ficasse na tela, bastaria fechá-la
+     * e abrir outra (ou girar o aparelho) para ganhar tentativas novas.
+     */
+    fun lockoutRemainingMs(context: Context): Long {
+        val until = prefs(context).getLong(KEY_LOCKED_UNTIL, 0L)
+        val remaining = until - System.currentTimeMillis()
+        // Se o relógio for atrasado, a trava não passa do prazo máximo. Adiantar o
+        // relógio encurta a trava, mas no quiosque a criança não abre as Configurações.
+        return remaining.coerceIn(0L, MAX_LOCKOUT_MS)
+    }
+
+    /**
+     * Registra um PIN errado. A cada [MAX_ATTEMPTS] erros seguidos, trava por um
+     * tempo que dobra a cada rodada. Devolve a duração da trava (0 se não travou).
+     */
+    fun registerFailure(context: Context): Long {
+        val p = prefs(context)
+        val failures = p.getInt(KEY_FAILURES, 0) + 1
+        val lockout = if (failures % MAX_ATTEMPTS == 0) {
+            val round = failures / MAX_ATTEMPTS - 1
+            (BASE_LOCKOUT_MS shl round.coerceAtMost(10)).coerceAtMost(MAX_LOCKOUT_MS)
+        } else 0L
+        p.edit()
+            .putInt(KEY_FAILURES, failures)
+            .apply { if (lockout > 0) putLong(KEY_LOCKED_UNTIL, System.currentTimeMillis() + lockout) }
+            .apply()
+        return lockout
+    }
+
+    fun clearFailures(context: Context) {
+        prefs(context).edit().remove(KEY_FAILURES).remove(KEY_LOCKED_UNTIL).apply()
     }
 
     private fun derive(pin: String, salt: ByteArray): ByteArray =

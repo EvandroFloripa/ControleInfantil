@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import com.controleinfantil.kids.R
 import com.controleinfantil.kids.admin.PolicyManager
 import com.controleinfantil.kids.checkin.CheckinService
+import com.controleinfantil.kids.launcher.LauncherActivity
 import com.controleinfantil.kids.location.LocationReporter
 import com.controleinfantil.kids.screen.ScreenCaptureActivity
 import com.controleinfantil.kids.schedule.UsageTracker
@@ -86,8 +87,9 @@ class CommandService : Service() {
     }
 
     /**
-     * Soma o tempo usado e, se as regras bloquearem agora, apaga a tela — assim a
-     * criança sai de qualquer app em que esteja, não só do nosso launcher.
+     * Soma o tempo usado e, se as regras bloquearem agora, tira a criança do app em
+     * que estiver: traz o launcher (que mostra o aviso de descanso) para a frente e
+     * apaga a tela. Só apagar não bastava — ao desbloquear, ela voltava ao mesmo app.
      */
     private fun enforceTimeRules(elapsedSeconds: Long) {
         val emUso = UsageTracker.isInUse(this)
@@ -95,8 +97,25 @@ class CommandService : Service() {
 
         // Não interrompe o responsável enquanto ele ajusta as próprias regras.
         if (emUso && !GuardianArea.inForeground && checkRules(this).blocked) {
-            Log.i(TAG, "Limite de horário atingido; bloqueando a tela")
+            Log.i(TAG, "Limite de horário atingido; voltando ao launcher")
+            showLauncher()
             policy.lockNow()
+        }
+    }
+
+    /**
+     * Abrir uma tela a partir de um serviço é restrito no Android 10+, mas o Device
+     * Owner é isento. Sem Device Owner o sistema pode ignorar o pedido; aí resta o
+     * lockNow(), e o quiosque também não é real (ver KioskManager).
+     */
+    private fun showLauncher() {
+        try {
+            startActivity(
+                Intent(this, LauncherActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Não consegui trazer o launcher para a frente", e)
         }
     }
 
