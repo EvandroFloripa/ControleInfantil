@@ -12,7 +12,9 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.controleinfantil.kids.R
 import com.controleinfantil.kids.admin.PolicyManager
+import com.controleinfantil.kids.checkin.CheckinService
 import com.controleinfantil.kids.location.LocationReporter
+import com.controleinfantil.kids.screen.ScreenCaptureActivity
 import com.controleinfantil.kids.schedule.UsageTracker
 import com.controleinfantil.kids.schedule.checkRules
 import com.controleinfantil.kids.setup.GuardianArea
@@ -106,19 +108,26 @@ class CommandService : Service() {
             Command.Type.ENABLE_LOCATION -> asStatus(policy.ensureLocationEnabled())
             Command.Type.REQUEST_LOCATION ->
                 if (location.reportOnce(client)) "done" else "error"
-            // Recursos estruturados: sinalizam que ainda não estão prontos em vez
-            // de fingir sucesso. Ver README.
-            Command.Type.START_SCREEN_VIEW,
-            Command.Type.START_CHECKIN -> "unsupported"
+            Command.Type.START_CHECKIN -> {
+                // Conecta câmera/microfone com notificação visível (ver CheckinService).
+                CheckinService.start(this)
+                "done"
+            }
+            Command.Type.START_SCREEN_VIEW -> {
+                // Abre o consentimento de captura de tela, exigido pelo Android.
+                ScreenCaptureActivity.launch(this)
+                "started"
+            }
             Command.Type.UNKNOWN -> "unsupported"
         }
         val detail = when (result) {
             "needs_admin" -> "Falta ativar o Device Admin no aparelho"
             "needs_owner" -> "Falta provisionar como Device Owner (ADB)"
             "unsupported" -> "Comando ainda não implementado nesta versão"
+            "started" -> "Aguardando o consentimento de captura de tela no aparelho"
             else -> null
         }
-        val status = if (result == "done") "done" else "error"
+        val status = if (result == "done" || result == "started") "done" else "error"
         client.reportCommandResult(cmd.id, status, detail ?: result.takeIf { it != "done" })
     }
 

@@ -9,6 +9,15 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Check-in de vídeo/áudio: sempre com notificação visível e a bolinha do
+         Android. Nunca oculto. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Ver a tela: o Android exige um toque de consentimento no aparelho. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
@@ -67,6 +76,23 @@
             android:name=".remote.CommandService"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <!-- Check-in de vídeo/áudio (notificação visível enquanto ativo) -->
+        <service
+            android:name=".checkin.CheckinService"
+            android:exported="false"
+            android:foregroundServiceType="camera|microphone" />
+
+        <!-- Consentimento e compartilhamento de tela -->
+        <activity
+            android:name=".screen.ScreenCaptureActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Transparent" />
+
+        <service
+            android:name=".screen.ScreenShareService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
 
         <!-- Re-inicia o serviço após reboot -->
         <receiver

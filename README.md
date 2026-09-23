@@ -22,8 +22,8 @@ tela, e isso é proposital.
 | 📍 Localização | ✅ Funciona | FusedLocation, reporta ao painel |
 | 🛰️ Ligar o GPS se estiver desligado | ✅ Funciona | Device Owner (`setLocationEnabled`) |
 | 🔁 Reiniciar o aparelho | ✅ Funciona | Device Owner (`reboot`) |
-| 🖥️ Ver a tela em uso | ⚙️ Estruturado | MediaProjection (mostra ícone de transmissão) |
-| 📷🎙️ Check-in de vídeo/áudio | ⚙️ Estruturado | Chamada transparente (mostra indicador do Android) |
+| 🖥️ Ver a tela em uso | ⚙️ Camada pronta | Consentimento + notificação prontos; falta o WebRTC |
+| 📷🎙️ Check-in de vídeo/áudio | ⚙️ Camada pronta | Conecta com notificação visível; falta o WebRTC |
 | ⛔ Desligar (shutdown) total | ❌ Impossível para apps | Use "bloquear tela" ou "reiniciar" no lugar |
 
 > **Por que "desligar" não existe?** O Android não expõe *shutdown* completo para
@@ -61,6 +61,27 @@ tela, e isso é proposital.
 4. **Build:** abra a pasta no Android Studio e rode no aparelho.
 5. **Painel:** abra `painel/index.html` no navegador, informe a mesma URL e chave,
    crie sua conta e pareie (passo abaixo).
+
+## Ver a tela e check-in de vídeo/áudio
+
+Estes dois recursos são **sempre visíveis** — nunca ocultos. É o que separa controle
+parental de espionagem, e é uma linha que o app não cruza:
+
+- **Check-in de vídeo/áudio:** ao receber o comando, a câmera e o microfone conectam
+  sozinhos (a criança não precisa aceitar), mas o aparelho mostra uma **notificação
+  persistente** enquanto dura, além da **bolinha verde** que o próprio Android exibe
+  e que não pode ser desligada.
+- **Ver a tela:** o Android **obriga um toque de "Iniciar agora"** no aparelho antes
+  de qualquer captura — é uma proteção do sistema, não contornada aqui — e mostra o
+  ícone de transmissão enquanto dura.
+
+O que está pronto é toda a **camada transparente**: o disparo pelo comando, as
+permissões, os serviços em primeiro plano com as notificações certas e o
+consentimento de tela. O que **falta** é o transporte em tempo real do vídeo/áudio,
+que usa **WebRTC + um servidor de sinalização** (dá para usar o Supabase Realtime) e
+**STUN/TURN**. Essa peça só faz sentido validada em aparelho real; no código, o ponto
+onde ela entra está isolado atrás da interface `media/MediaTransport.kt`, hoje com uma
+implementação vazia que **não captura nem envia nada**.
 
 ## PIN do responsável
 

@@ -33,6 +33,18 @@
 
     <string name="launcher_empty">Nenhum app liberado ainda.\n\nO responsável escolhe os apps na área de configuração (toque e segure no título).</string>
 
+    <!-- Check-in de vídeo/áudio -->
+    <string name="checkin_channel">Check-in de vídeo/áudio</string>
+    <string name="checkin_channel_desc">Mostra quando a câmera e o microfone estão em uso pelo responsável</string>
+    <string name="checkin_active_title">Câmera e microfone em uso</string>
+    <string name="checkin_active_text">O responsável está acompanhando por vídeo/áudio</string>
+
+    <!-- Compartilhamento de tela -->
+    <string name="screen_channel">Compartilhamento de tela</string>
+    <string name="screen_channel_desc">Mostra quando a tela está sendo compartilhada com o responsável</string>
+    <string name="screen_active_title">Tela sendo compartilhada</string>
+    <string name="screen_active_text">O responsável está vendo a tela deste aparelho</string>
+
     <!-- PIN do responsável -->
     <string name="pin_create_title">Criar o PIN do responsável</string>
     <string name="pin_create_message">Escolha um PIN para proteger esta área. Sem ele, a criança poderia liberar qualquer aplicativo.</string>
