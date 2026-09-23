@@ -29,28 +29,33 @@ import com.controleinfantil.kids.remote.DeviceIdentity
  */
 class CheckinService : Service() {
 
-    private val transport = MediaTransport.create()
+    private lateinit var transport: MediaTransport
 
     override fun onCreate() {
         super.onCreate()
+        // Só aqui o Context já está pronto (após attachBaseContext).
+        transport = MediaTransport.create(this)
         startAsForeground()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_STOP -> {
-                stopSelf()
-                return START_NOT_STICKY
-            }
-            else -> transport.start(
-                MediaTransport.SessionConfig(
-                    deviceId = DeviceIdentity.id(this).orEmpty(),
-                    video = true,
-                    audio = true,
-                    screen = false,
-                )
-            )
+        if (intent?.action == ACTION_STOP) {
+            stopSelf()
+            return START_NOT_STICKY
         }
+        val sessionId = intent?.getStringExtra(EXTRA_SESSION)
+        if (sessionId.isNullOrEmpty()) {
+            Log.e(TAG, "Check-in sem session_id; encerrando")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        transport.start(
+            MediaTransport.SessionConfig(
+                deviceId = DeviceIdentity.id(this).orEmpty(),
+                sessionId = sessionId,
+                kind = MediaTransport.Kind.CAMERA,
+            )
+        )
         // Não reinicia sozinho: um check-in é pontual, não deve voltar após ser morto.
         return START_NOT_STICKY
     }
@@ -93,7 +98,7 @@ class CheckinService : Service() {
     }
 
     override fun onDestroy() {
-        transport.stop()
+        if (::transport.isInitialized) transport.stop()
         super.onDestroy()
     }
 
@@ -103,10 +108,12 @@ class CheckinService : Service() {
         private const val TAG = "CheckinService"
         private const val CHANNEL_ID = "controle_infantil_checkin"
         private const val NOTIF_ID = 1002
+        private const val EXTRA_SESSION = "session_id"
         const val ACTION_STOP = "com.controleinfantil.kids.STOP_CHECKIN"
 
-        fun start(context: Context) {
+        fun start(context: Context, sessionId: String) {
             val intent = Intent(context, CheckinService::class.java)
+                .putExtra(EXTRA_SESSION, sessionId)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {

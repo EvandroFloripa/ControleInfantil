@@ -108,16 +108,20 @@ class CommandService : Service() {
             Command.Type.ENABLE_LOCATION -> asStatus(policy.ensureLocationEnabled())
             Command.Type.REQUEST_LOCATION ->
                 if (location.reportOnce(client)) "done" else "error"
-            Command.Type.START_CHECKIN -> {
-                // Conecta câmera/microfone com notificação visível (ver CheckinService).
-                CheckinService.start(this)
-                "done"
-            }
-            Command.Type.START_SCREEN_VIEW -> {
-                // Abre o consentimento de captura de tela, exigido pelo Android.
-                ScreenCaptureActivity.launch(this)
-                "started"
-            }
+            Command.Type.START_CHECKIN ->
+                if (cmd.sessionId.isEmpty()) "error"
+                else {
+                    // Conecta câmera/microfone com notificação visível (ver CheckinService).
+                    CheckinService.start(this, cmd.sessionId)
+                    "done"
+                }
+            Command.Type.START_SCREEN_VIEW ->
+                if (cmd.sessionId.isEmpty()) "error"
+                else {
+                    // Abre o consentimento de captura de tela, exigido pelo Android.
+                    ScreenCaptureActivity.launch(this, cmd.sessionId)
+                    "started"
+                }
             Command.Type.UNKNOWN -> "unsupported"
         }
         val detail = when (result) {

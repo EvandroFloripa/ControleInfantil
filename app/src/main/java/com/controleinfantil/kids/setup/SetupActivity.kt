@@ -47,6 +47,8 @@ class SetupActivity : GuardianActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Concede câmera/mic/localização ao app quando somos Device Owner.
+        policy.grantMediaPermissions()
         refreshStatus()
     }
 

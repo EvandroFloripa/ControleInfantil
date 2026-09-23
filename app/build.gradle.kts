@@ -56,4 +56,8 @@ dependencies {
     // Rede (chamadas REST ao Supabase)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.json:json:20240303")
+
+    // WebRTC (fork mantido; o Google parou de publicar o org.webrtc no Maven).
+    // A versão pode precisar de ajuste ao compilar — ver README.
+    implementation("io.github.webrtc-sdk:android:125.6422.07")
 }

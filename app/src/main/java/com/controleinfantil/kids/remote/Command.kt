@@ -14,6 +14,9 @@ data class Command(
     val type: Type,
     val payload: JSONObject,
 ) {
+    /** Sessão WebRTC do check-in / ver a tela, definida pelo painel. */
+    val sessionId: String get() = payload.optString("session_id")
+
     enum class Type(val wire: String) {
         LOCK_SCREEN("lock_screen"),
         REBOOT("reboot"),

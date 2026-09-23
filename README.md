@@ -22,8 +22,8 @@ tela, e isso é proposital.
 | 📍 Localização | ✅ Funciona | FusedLocation, reporta ao painel |
 | 🛰️ Ligar o GPS se estiver desligado | ✅ Funciona | Device Owner (`setLocationEnabled`) |
 | 🔁 Reiniciar o aparelho | ✅ Funciona | Device Owner (`reboot`) |
-| 🖥️ Ver a tela em uso | ⚙️ Camada pronta | Consentimento + notificação prontos; falta o WebRTC |
-| 📷🎙️ Check-in de vídeo/áudio | ⚙️ Camada pronta | Conecta com notificação visível; falta o WebRTC |
+| 🖥️ Ver a tela em uso | 🧪 Implementado (não testado) | WebRTC + MediaProjection; precisa de teste em aparelho |
+| 📷🎙️ Check-in de vídeo/áudio | 🧪 Implementado (não testado) | WebRTC; precisa de teste em aparelho |
 | ⛔ Desligar (shutdown) total | ❌ Impossível para apps | Use "bloquear tela" ou "reiniciar" no lugar |
 
 > **Por que "desligar" não existe?** O Android não expõe *shutdown* completo para
@@ -75,13 +75,24 @@ parental de espionagem, e é uma linha que o app não cruza:
   de qualquer captura — é uma proteção do sistema, não contornada aqui — e mostra o
   ícone de transmissão enquanto dura.
 
-O que está pronto é toda a **camada transparente**: o disparo pelo comando, as
-permissões, os serviços em primeiro plano com as notificações certas e o
-consentimento de tela. O que **falta** é o transporte em tempo real do vídeo/áudio,
-que usa **WebRTC + um servidor de sinalização** (dá para usar o Supabase Realtime) e
-**STUN/TURN**. Essa peça só faz sentido validada em aparelho real; no código, o ponto
-onde ela entra está isolado atrás da interface `media/MediaTransport.kt`, hoje com uma
-implementação vazia que **não captura nem envia nada**.
+O transporte agora é **WebRTC**, com sinalização pela tabela `signals` do Supabase.
+O aparelho é quem envia a mídia (cria a oferta); o painel recebe e mostra no navegador.
+
+**Para funcionar, além do schema principal:**
+
+1. Rode também o [`supabase/signaling.sql`](supabase/signaling.sql).
+2. Configure um **TURN** nos dois lados — em `media/WebRtcConfig.kt` (app) e no topo do
+   `<script>` do `painel/index.html` (`ICE_SERVERS`). Sem TURN, costuma conectar só no
+   Wi-Fi; em rede móvel (4G/5G) o vídeo quase sempre não passa.
+3. Provisione como **Device Owner** (`docs/PROVISIONAMENTO.md`). Assim o app concede
+   câmera/microfone a si mesmo e o check-in conecta sem ninguém tocar em "permitir".
+   Sem Device Owner, a primeira captura pede a permissão na tela — e pode não ser
+   aceita por uma criança pequena.
+
+> **Ainda não testei nada disto em aparelho.** A biblioteca WebRTC
+> (`io.github.webrtc-sdk:android`) e alguns nomes de API podem precisar de ajuste na
+> primeira compilação. Trate esta parte como um ponto de partida a validar no
+> aparelho, não como algo pronto.
 
 ## PIN do responsável
 

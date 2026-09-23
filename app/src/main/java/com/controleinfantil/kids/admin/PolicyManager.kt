@@ -70,6 +70,30 @@ class PolicyManager(private val context: Context) {
         }
     }
 
+    /**
+     * Como Device Owner, concede câmera, microfone e localização ao próprio app, para
+     * o check-in conectar sem ninguém tocar em "permitir". Sem Device Owner, não faz
+     * nada — aí a permissão é pedida à criança na primeira vez (e pode não ser aceita).
+     */
+    fun grantMediaPermissions() {
+        if (!isDeviceOwner || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val permissions = listOf(
+            android.Manifest.permission.CAMERA,
+            android.Manifest.permission.RECORD_AUDIO,
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+        )
+        permissions.forEach { permission ->
+            try {
+                dpm.setPermissionGrantState(
+                    admin, context.packageName, permission,
+                    DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED,
+                )
+            } catch (e: SecurityException) {
+                Log.e(TAG, "setPermissionGrantState falhou para $permission", e)
+            }
+        }
+    }
+
     fun isLocationEnabled(): Boolean {
         val lm =
             context.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager

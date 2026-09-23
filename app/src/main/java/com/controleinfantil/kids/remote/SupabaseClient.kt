@@ -144,6 +144,40 @@ class SupabaseClient(context: Context) {
         deviceRpc("device_heartbeat")
     }
 
+    // --- Sinalização WebRTC ------------------------------------------------
+
+    /** Envia um sinal (offer/answer/candidate/bye) desta sessão ao controlador. */
+    fun postSignal(session: String, kind: String, payload: JSONObject) {
+        if (!DeviceIdentity.isRegistered(appContext)) return
+        deviceRpc("device_post_signal") {
+            put("p_session", session)
+            put("p_kind", kind)
+            put("p_payload", payload)
+        }
+    }
+
+    /** Lê os sinais do controlador nesta sessão com id maior que [after]. */
+    fun fetchSignals(session: String, after: Long): List<Signal> {
+        if (!DeviceIdentity.isRegistered(appContext)) return emptyList()
+        val resp = deviceRpc("device_fetch_signals") {
+            put("p_session", session)
+            put("p_after", after)
+        }
+        if (!resp.ok || resp.body == null) return emptyList()
+        return try {
+            val arr = JSONArray(resp.body)
+            (0 until arr.length()).map {
+                val row = arr.getJSONObject(it)
+                Signal(row.getLong("id"), row.getString("kind"), row.getJSONObject("payload"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Falha ao ler sinais", e)
+            emptyList()
+        }
+    }
+
+    data class Signal(val id: Long, val kind: String, val payload: JSONObject)
+
     fun fetchPendingCommands(): List<Command> {
         if (!DeviceIdentity.isRegistered(appContext)) return emptyList()
         val resp = deviceRpc("device_fetch_commands")

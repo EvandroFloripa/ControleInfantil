@@ -177,6 +177,23 @@
   </div>
 
 </main>
+
+<!-- Visualizador de vídeo/tela (WebRTC) -->
+<div id="viewerModal" class="hidden" style="position:fixed;inset:0;background:#000;
+     z-index:50;display:flex;flex-direction:column">
+  <div style="display:flex;justify-content:space-between;align-items:center;
+       padding:12px 16px;color:#fff;background:#111">
+    <span id="viewerTitle">Conectando…</span>
+    <button id="viewerClose" class="danger">Encerrar</button>
+  </div>
+  <video id="viewerVideo" autoplay playsinline
+         style="flex:1;width:100%;background:#000;object-fit:contain"></video>
+  <p class="muted" style="color:#aaa;text-align:center;padding:8px">
+    O aparelho da criança mostra uma notificação e a bolinha do Android enquanto isto
+    está ativo.
+  </p>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -464,6 +481,10 @@ document.querySelectorAll('[data-cmd]').forEach(btn => {
 async function sendCommand(type) {
   if (!state.selected) return toast('Escolha um aparelho');
   if (type === 'reboot' && !confirm('Reiniciar o aparelho agora?')) return;
+  // Check-in e ver a tela abrem o visualizador WebRTC (payload com session_id).
+  if (type === 'start_checkin' || type === 'start_screen_view') {
+    return startViewer(type);
+  }
   try {
     await rpc('controller_send_command', { p_device: state.selected, p_type: type });
     toast('Comando enviado ✅');
@@ -559,6 +580,125 @@ async function loadHistory() {
           r.result_detail ? ' — ' + esc(r.result_detail) : ''}</span></div>`).join('');
   } catch (e) { $('historyList').textContent = 'Erro: ' + e.message; }
 }
+
+// --- Visualizador WebRTC (lado do controlador = quem recebe a mídia) --------
+const viewer = { pc: null, poll: null, session: null, lastId: 0 };
+
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  // TURN — necessário em redes móveis. Preencha com o mesmo do app:
+  // { urls: 'turn:SEU-TURN:3478', username: 'usuario', credential: 'senha' },
+];
+
+function uuid() {
+  return (crypto.randomUUID && crypto.randomUUID()) ||
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
+async function insertRow(table, row) {
+  const resp = await withAuth(() => fetch(state.url + '/rest/v1/' + table, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify(row),
+  }));
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+}
+
+function postControllerSignal(kind, payload) {
+  return insertRow('signals', {
+    session_id: viewer.session, device_id: state.selected,
+    from_role: 'controller', kind, payload,
+  });
+}
+
+async function startViewer(type) {
+  viewer.session = uuid();
+  viewer.lastId = 0;
+  $('viewerTitle').textContent =
+    type === 'start_checkin' ? 'Check-in de vídeo/áudio' : 'Tela da criança';
+  $('viewerModal').classList.remove('hidden');
+
+  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  viewer.pc = pc;
+  // Recebemos mídia; para check-in também queremos ouvir, então só exibimos.
+  pc.ontrack = e => { $('viewerVideo').srcObject = e.streams[0]; };
+  pc.onicecandidate = e => {
+    if (e.candidate) {
+      postControllerSignal('candidate', {
+        sdpMid: e.candidate.sdpMid,
+        sdpMLineIndex: e.candidate.sdpMLineIndex,
+        candidate: e.candidate.candidate,
+      }).catch(() => {});
+    }
+  };
+  pc.onconnectionstatechange = () => {
+    if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
+      $('viewerTitle').textContent = 'Conexão encerrada';
+    } else if (pc.connectionState === 'connected') {
+      $('viewerTitle').textContent = 'Conectado';
+    }
+  };
+
+  try {
+    await rpc('controller_send_command', {
+      p_device: state.selected, p_type: type,
+      p_payload: { session_id: viewer.session },
+    });
+  } catch (e) {
+    toast(e.message);
+    return stopViewer();
+  }
+
+  // Aguarda a oferta do aparelho e troca os sinais.
+  viewer.poll = setInterval(pollSignals, 1200);
+  pollSignals();
+}
+
+async function pollSignals() {
+  if (!viewer.pc || !viewer.session) return;
+  let rows;
+  try {
+    rows = await select(
+      `signals?session_id=eq.${viewer.session}&device_id=eq.${state.selected}` +
+      `&from_role=eq.device&id=gt.${viewer.lastId}&order=id&select=id,kind,payload`);
+  } catch { return; }
+  for (const s of rows) {
+    viewer.lastId = Math.max(viewer.lastId, s.id);
+    try { await handleDeviceSignal(s); } catch (e) { console.error(e); }
+  }
+}
+
+async function handleDeviceSignal(s) {
+  const pc = viewer.pc;
+  if (s.kind === 'offer') {
+    await pc.setRemoteDescription({ type: 'offer', sdp: s.payload.sdp });
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await postControllerSignal('answer', { type: 'answer', sdp: answer.sdp });
+  } else if (s.kind === 'candidate') {
+    await pc.addIceCandidate({
+      sdpMid: s.payload.sdpMid,
+      sdpMLineIndex: s.payload.sdpMLineIndex,
+      candidate: s.payload.candidate,
+    });
+  } else if (s.kind === 'bye') {
+    stopViewer();
+  }
+}
+
+function stopViewer() {
+  if (viewer.poll) clearInterval(viewer.poll);
+  if (viewer.session) postControllerSignal('bye', {}).catch(() => {});
+  if (viewer.pc) { try { viewer.pc.close(); } catch {} }
+  $('viewerVideo').srcObject = null;
+  $('viewerModal').classList.add('hidden');
+  viewer.pc = null; viewer.poll = null; viewer.session = null;
+}
+
+$('viewerClose').onclick = stopViewer;
 
 loadCfg();
 </script>

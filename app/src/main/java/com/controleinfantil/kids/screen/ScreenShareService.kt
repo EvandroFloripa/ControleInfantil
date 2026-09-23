@@ -7,8 +7,6 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.media.projection.MediaProjection
-import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -26,14 +24,20 @@ import com.controleinfantil.kids.remote.DeviceIdentity
  */
 class ScreenShareService : Service() {
 
-    private val transport = MediaTransport.create()
-    private var projection: MediaProjection? = null
+    private lateinit var transport: MediaTransport
+
+    override fun onCreate() {
+        super.onCreate()
+        // Só aqui o Context já está pronto (após attachBaseContext).
+        transport = MediaTransport.create(this)
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             stopSelf()
             return START_NOT_STICKY
         }
+        // Em primeiro plano ANTES de o WebRTC criar a projeção (exigência do Android 14).
         startAsForeground()
 
         val resultCode = intent?.getIntExtra(EXTRA_CODE, 0) ?: 0
@@ -42,28 +46,22 @@ class ScreenShareService : Service() {
                 it.getParcelableExtra(EXTRA_DATA, Intent::class.java)
             else @Suppress("DEPRECATION") it.getParcelableExtra(EXTRA_DATA)
         }
-        if (resultCode == 0 || data == null) {
-            Log.e(TAG, "Sem dados de consentimento; encerrando")
+        val sessionId = intent?.getStringExtra(EXTRA_SESSION).orEmpty()
+        if (resultCode == 0 || data == null || sessionId.isEmpty()) {
+            Log.e(TAG, "Sem dados de consentimento ou sessão; encerrando")
             stopSelf()
             return START_NOT_STICKY
         }
 
-        val manager =
-            getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        projection = manager.getMediaProjection(resultCode, data).also { proj ->
-            proj.registerCallback(object : MediaProjection.Callback() {
-                override fun onStop() {
-                    stopSelf()
-                }
-            }, null)
-        }
-
+        // O consentimento (code+data) vai direto ao WebRTC, que cria a projeção.
+        // Criá-la aqui também a consumiria e o WebRTC falharia.
         transport.start(
             MediaTransport.SessionConfig(
                 deviceId = DeviceIdentity.id(this).orEmpty(),
-                video = false,
-                audio = false,
-                screen = true,
+                sessionId = sessionId,
+                kind = MediaTransport.Kind.SCREEN,
+                screenResultCode = resultCode,
+                screenData = data,
             )
         )
         return START_NOT_STICKY
@@ -103,9 +101,7 @@ class ScreenShareService : Service() {
     }
 
     override fun onDestroy() {
-        transport.stop()
-        projection?.stop()
-        projection = null
+        if (::transport.isInitialized) transport.stop()
         super.onDestroy()
     }
 
@@ -117,12 +113,14 @@ class ScreenShareService : Service() {
         private const val NOTIF_ID = 1003
         private const val EXTRA_CODE = "code"
         private const val EXTRA_DATA = "data"
+        private const val EXTRA_SESSION = "session_id"
         const val ACTION_STOP = "com.controleinfantil.kids.STOP_SCREEN"
 
-        fun start(context: Context, resultCode: Int, data: Intent) {
+        fun start(context: Context, resultCode: Int, data: Intent, sessionId: String) {
             val intent = Intent(context, ScreenShareService::class.java)
                 .putExtra(EXTRA_CODE, resultCode)
                 .putExtra(EXTRA_DATA, data)
+                .putExtra(EXTRA_SESSION, sessionId)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
