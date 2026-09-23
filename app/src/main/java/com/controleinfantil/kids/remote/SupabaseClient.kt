@@ -69,16 +69,36 @@ class SupabaseClient(context: Context) {
      * recriado deixaria o app falhando para sempre.
      */
     private fun deviceRpc(fn: String, extra: JSONObject.() -> Unit = {}): Response {
+        val sentId = DeviceIdentity.id(appContext)
+        val sentToken = DeviceIdentity.token(appContext)
         val args = JSONObject()
-            .put("p_device", DeviceIdentity.id(appContext))
-            .put("p_token", DeviceIdentity.token(appContext))
+            .put("p_device", sentId)
+            .put("p_token", sentToken)
             .apply(extra)
         val resp = rpc(fn, args)
-        if (resp.isDeviceAuthFailure) {
+        if (resp.isDeviceAuthFailure) forgetIdentity(sentId, sentToken)
+        return resp
+    }
+
+    /**
+     * Esquece o registro para que o próximo ciclo registre de novo.
+     *
+     * Sob a mesma trava do registro e só se a identidade guardada ainda for a que
+     * fez a chamada: uma resposta atrasada não pode apagar um registro recém-criado
+     * por outra tela — isso faria o responsável parear um aparelho que nunca busca
+     * comandos.
+     */
+    private fun forgetIdentity(sentId: String?, sentToken: String?) {
+        synchronized(REGISTRATION_LOCK) {
+            if (DeviceIdentity.id(appContext) != sentId ||
+                DeviceIdentity.token(appContext) != sentToken
+            ) {
+                Log.i(TAG, "Resposta atrasada de um registro antigo; identidade mantida")
+                return
+            }
             Log.w(TAG, "Servidor recusou o token do aparelho; registrando de novo")
             DeviceIdentity.clear(appContext)
         }
-        return resp
     }
 
     // --- Registro -----------------------------------------------------------
@@ -165,7 +185,7 @@ class SupabaseClient(context: Context) {
         val resp = deviceRpc("device_create_pairing_code")
         return when {
             resp.code == CODE_NETWORK -> PairingResult.NoNetwork
-            resp.body?.contains("device_already_paired") == true -> PairingResult.AlreadyPaired
+            resp.errorMessage == "device_already_paired" -> PairingResult.AlreadyPaired
             !resp.ok || resp.body == null -> PairingResult.Failed
             else -> try {
                 val row = JSONArray(resp.body).optJSONObject(0) ?: return PairingResult.Failed
@@ -188,10 +208,25 @@ class SupabaseClient(context: Context) {
     }
 
     private data class Response(val ok: Boolean, val code: Int, val body: String?) {
-        /** O servidor recusou o token deste aparelho (não é falha de rede). */
+        /** Campo "message" do erro do PostgREST, quando houver. */
+        val errorMessage: String?
+            get() = body?.let {
+                runCatching { JSONObject(it).optString("message").ifEmpty { null } }.getOrNull()
+            }
+
+        /**
+         * O servidor recusou *o token deste aparelho*.
+         *
+         * Decidido pela mensagem que a função `private.assert_device` levanta, nunca
+         * pelo código HTTP: outros erros legítimos chegam como 401/403 — "já
+         * pareado", por exemplo, e uma chave anon trocada faria todos os aparelhos
+         * apagarem a identidade e perderem o pareamento.
+         */
         val isDeviceAuthFailure: Boolean
-            get() = body?.contains("device_auth_failed") == true ||
-                (!ok && code in AUTH_FAILURE_CODES)
+            get() = errorMessage == "device_auth_failed" ||
+                body?.let {
+                    runCatching { JSONObject(it).optString("code") == "28000" }.getOrDefault(false)
+                } == true
     }
 
     private val isConfigured: Boolean
@@ -205,9 +240,6 @@ class SupabaseClient(context: Context) {
         /** Códigos internos (não são HTTP). */
         private const val CODE_NETWORK = -1
         private const val CODE_NOT_CONFIGURED = -2
-
-        /** SQLSTATE 28000 chega como 401 ou 403, conforme a versão do PostgREST. */
-        private val AUTH_FAILURE_CODES = setOf(401, 403)
 
         /** Compartilhada por todas as instâncias no processo. */
         private val REGISTRATION_LOCK = Any()

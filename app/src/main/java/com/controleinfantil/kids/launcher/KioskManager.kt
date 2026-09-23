@@ -65,6 +65,10 @@ class KioskManager(private val context: Context) {
     fun startLockTask(activity: Activity) {
         if (!isOwner) return
         try {
+            // Sempre reaplica antes de fixar: depois de um reboot, ou se o app nunca
+            // passou pela tela de escolha, a lista estaria vazia e o quiosque viraria
+            // uma fixação de tela comum, da qual a criança consegue sair.
+            applyLockTaskAllowlist()
             activity.startLockTask()
         } catch (e: IllegalStateException) {
             Log.e(TAG, "startLockTask falhou", e)

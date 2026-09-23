@@ -15,6 +15,7 @@ import com.controleinfantil.kids.R
 import com.controleinfantil.kids.remote.CommandService
 import com.controleinfantil.kids.schedule.Verdict
 import com.controleinfantil.kids.schedule.checkRules
+import com.controleinfantil.kids.setup.GuardianArea
 import com.controleinfantil.kids.setup.SetupActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -46,6 +47,8 @@ class LauncherActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // De volta à tela da criança: a área do responsável exige o PIN outra vez.
+        GuardianArea.lock()
         kiosk.startLockTask(this)
         // Recarrega a cada volta: o responsável pode ter mudado a lista.
         refreshApps()

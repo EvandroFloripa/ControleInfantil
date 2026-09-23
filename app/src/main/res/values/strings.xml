@@ -33,6 +33,18 @@
 
     <string name="launcher_empty">Nenhum app liberado ainda.\n\nO responsável escolhe os apps na área de configuração (toque e segure no título).</string>
 
+    <!-- PIN do responsável -->
+    <string name="pin_create_title">Criar o PIN do responsável</string>
+    <string name="pin_create_message">Escolha um PIN para proteger esta área. Sem ele, a criança poderia liberar qualquer aplicativo.</string>
+    <string name="pin_enter_title">Área do responsável</string>
+    <string name="pin_enter_message">Digite o PIN para continuar.</string>
+    <string name="pin_hint">PIN</string>
+    <string name="pin_confirm_hint">Repita o PIN</string>
+    <string name="pin_too_short">O PIN precisa ter pelo menos %1$d números.</string>
+    <string name="pin_mismatch">Os dois PINs não são iguais.</string>
+    <string name="pin_wrong">PIN incorreto.</string>
+    <string name="pin_too_many">Muitas tentativas. Tente de novo.</string>
+
     <!-- Limites de horário -->
     <string name="schedule_button">Limites de horário</string>
     <string name="schedule_title">Limites de uso</string>

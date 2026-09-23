@@ -62,6 +62,16 @@ tela, e isso é proposital.
 5. **Painel:** abra `painel/index.html` no navegador, informe a mesma URL e chave,
    crie sua conta e pareie (passo abaixo).
 
+## PIN do responsável
+
+A área do responsável (toque longo em "Meus aplicativos") é protegida por **PIN**.
+Na primeira vez, o app pede para você criá-lo. Sem essa proteção a criança abriria a
+configuração e poderia liberar o navegador, as Configurações ou a Play Store,
+derrubando todo o controle.
+
+O PIN é guardado apenas como hash com sal (PBKDF2, 50 mil iterações) — nunca em
+texto. Ao voltar para a tela da criança, o PIN passa a ser exigido de novo.
+
 ## Escolher os apps da criança
 
 Na área do responsável (toque longo em "Meus aplicativos"), use **"Escolher os apps
