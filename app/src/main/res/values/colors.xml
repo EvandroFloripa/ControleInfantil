@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="kidBackground">#FFF8E1</color>
+    <color name="kidText">#3E2723</color>
+    <color name="primary">#00695C</color>
+    <color name="primaryDark">#004D40</color>
+    <color name="white">#FFFFFF</color>
+    <color name="iconBg">#00897B</color>
+</resources>

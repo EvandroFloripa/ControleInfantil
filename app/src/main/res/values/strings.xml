@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Controle Infantil</string>
+    <string name="kid_home_title">Meus aplicativos</string>
+    <string name="app_icon_desc">Ícone do aplicativo</string>
+
+    <string name="setup_title">Configuração do responsável</string>
+    <string name="status_fmt">Device Admin: %1$s\nDevice Owner: %2$s</string>
+    <string name="device_id_fmt">ID do aparelho:\n%1$s</string>
+    <string name="enable_admin">Ativar proteção (Device Admin)</string>
+    <string name="admin_explanation">O Controle Infantil precisa desta permissão para bloquear a tela e proteger o aparelho da criança.</string>
+    <string name="setup_hint">Para reiniciar o aparelho e forçar o GPS, o app precisa ser instalado como Device Owner via ADB (veja docs/PROVISIONAMENTO.md). Anote o ID do aparelho acima para cadastrá-lo no painel do controlador.</string>
+</resources>
