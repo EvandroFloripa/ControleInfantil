@@ -12,6 +12,15 @@
 --    - o CONTROLADOR, direto na tabela, protegido por RLS (precisa ser guardião).
 -- ============================================================================
 
+-- Garante que os comandos de parar sejam aceitos, mesmo em bancos que já rodaram
+-- uma versão anterior do schema (o create table if not exists não altera a checagem).
+alter table public.commands drop constraint if exists commands_type_check;
+alter table public.commands add constraint commands_type_check
+    check (type in (
+        'lock_screen', 'reboot', 'enable_location', 'request_location',
+        'start_screen_view', 'start_checkin',
+        'stop_screen_view', 'stop_checkin'));
+
 create table if not exists public.signals (
     id          bigint generated always as identity primary key,
     session_id  text not null,

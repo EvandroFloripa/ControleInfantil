@@ -92,7 +92,8 @@ create table if not exists public.commands (
     controller_id   uuid references public.controllers(id) on delete set null,
     type            text not null check (type in (
                         'lock_screen', 'reboot', 'enable_location', 'request_location',
-                        'start_screen_view', 'start_checkin')),
+                        'start_screen_view', 'start_checkin',
+                        'stop_screen_view', 'stop_checkin')),
     payload         jsonb not null default '{}'::jsonb,
     status          text not null default 'pending'
                     check (status in ('pending', 'done', 'error', 'expired')),

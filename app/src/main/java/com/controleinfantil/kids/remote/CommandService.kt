@@ -16,6 +16,7 @@ import com.controleinfantil.kids.checkin.CheckinService
 import com.controleinfantil.kids.launcher.LauncherActivity
 import com.controleinfantil.kids.location.LocationReporter
 import com.controleinfantil.kids.screen.ScreenCaptureActivity
+import com.controleinfantil.kids.screen.ScreenShareService
 import com.controleinfantil.kids.schedule.UsageTracker
 import com.controleinfantil.kids.schedule.checkRules
 import com.controleinfantil.kids.setup.GuardianArea
@@ -141,6 +142,14 @@ class CommandService : Service() {
                     ScreenCaptureActivity.launch(this, cmd.sessionId)
                     "started"
                 }
+            Command.Type.STOP_CHECKIN -> {
+                CheckinService.stop(this)
+                "done"
+            }
+            Command.Type.STOP_SCREEN_VIEW -> {
+                ScreenShareService.stop(this)
+                "done"
+            }
             Command.Type.UNKNOWN -> "unsupported"
         }
         val detail = when (result) {

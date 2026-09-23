@@ -36,6 +36,11 @@ interface MediaTransport {
     )
 
     companion object {
-        fun create(context: Context): MediaTransport = WebRtcTransport(context)
+        /**
+         * @param onClosed chamado quando a conexão termina (inclusive por um "bye"
+         *   vindo do painel), para o serviço se encerrar e a notificação sumir.
+         */
+        fun create(context: Context, onClosed: () -> Unit = {}): MediaTransport =
+            WebRtcTransport(context, onClosed)
     }
 }

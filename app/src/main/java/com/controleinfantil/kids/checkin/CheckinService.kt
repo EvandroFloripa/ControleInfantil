@@ -34,7 +34,9 @@ class CheckinService : Service() {
     override fun onCreate() {
         super.onCreate()
         // Só aqui o Context já está pronto (após attachBaseContext).
-        transport = MediaTransport.create(this)
+        // onClosed encerra o serviço quando a conexão termina (ex.: "bye" do painel),
+        // para a notificação não ficar dizendo "em uso" depois que parou.
+        transport = MediaTransport.create(this) { stopSelf() }
         startAsForeground()
     }
 

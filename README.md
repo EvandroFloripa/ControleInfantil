@@ -77,6 +77,8 @@ parental de espionagem, e é uma linha que o app não cruza:
 
 O transporte agora é **WebRTC**, com sinalização pela tabela `signals` do Supabase.
 O aparelho é quem envia a mídia (cria a oferta); o painel recebe e mostra no navegador.
+O botão **"Encerrar"** no painel para a transmissão no aparelho (câmera/tela e a
+notificação também param lá, não só no seu lado).
 
 **Para funcionar, além do schema principal:**
 

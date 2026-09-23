@@ -589,7 +589,7 @@ async function loadHistory() {
 }
 
 // --- Visualizador WebRTC (lado do controlador = quem recebe a mídia) --------
-const viewer = { pc: null, poll: null, session: null, lastId: 0 };
+const viewer = { pc: null, poll: null, session: null, type: null, lastId: 0 };
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -623,6 +623,7 @@ function postControllerSignal(kind, payload) {
 
 async function startViewer(type) {
   viewer.session = uuid();
+  viewer.type = type;
   viewer.lastId = 0;
   $('viewerTitle').textContent =
     type === 'start_checkin' ? 'Check-in de vídeo/áudio' : 'Tela da criança';
@@ -656,7 +657,7 @@ async function startViewer(type) {
     });
   } catch (e) {
     toast(e.message);
-    return stopViewer();
+    return stopViewer(false);   // nada começou no aparelho
   }
 
   // Aguarda a oferta do aparelho e troca os sinais.
@@ -692,20 +693,30 @@ async function handleDeviceSignal(s) {
       candidate: s.payload.candidate,
     });
   } else if (s.kind === 'bye') {
-    stopViewer();
+    // O aparelho já encerrou; só fecha o lado do painel.
+    stopViewer(false);
   }
 }
 
-function stopViewer() {
+/**
+ * Encerra a sessão. Com sendStop=true (botão Encerrar), manda o comando de parar
+ * ao aparelho — assim a câmera/tela e a notificação também param lá, não só aqui.
+ */
+function stopViewer(sendStop = true) {
   if (viewer.poll) clearInterval(viewer.poll);
+  if (sendStop && viewer.type) {
+    const stopType = viewer.type === 'start_checkin' ? 'stop_checkin' : 'stop_screen_view';
+    rpc('controller_send_command', { p_device: state.selected, p_type: stopType })
+      .catch(() => {});
+  }
   if (viewer.session) postControllerSignal('bye', {}).catch(() => {});
   if (viewer.pc) { try { viewer.pc.close(); } catch {} }
   $('viewerVideo').srcObject = null;
   $('viewerModal').classList.add('hidden');
-  viewer.pc = null; viewer.poll = null; viewer.session = null;
+  viewer.pc = null; viewer.poll = null; viewer.session = null; viewer.type = null;
 }
 
-$('viewerClose').onclick = stopViewer;
+$('viewerClose').onclick = () => stopViewer(true);
 
 loadCfg();
 </script>

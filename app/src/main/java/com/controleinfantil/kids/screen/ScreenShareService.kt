@@ -29,7 +29,8 @@ class ScreenShareService : Service() {
     override fun onCreate() {
         super.onCreate()
         // Só aqui o Context já está pronto (após attachBaseContext).
-        transport = MediaTransport.create(this)
+        // onClosed encerra o serviço quando a conexão termina (ex.: "bye" do painel).
+        transport = MediaTransport.create(this) { stopSelf() }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

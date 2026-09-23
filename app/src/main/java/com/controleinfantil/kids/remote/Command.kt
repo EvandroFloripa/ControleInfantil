@@ -22,9 +22,11 @@ data class Command(
         REBOOT("reboot"),
         ENABLE_LOCATION("enable_location"),
         REQUEST_LOCATION("request_location"),
-        // Estruturados (ver README): precisam de teste em aparelho real
+        // Vídeo/tela (WebRTC): precisam de teste em aparelho real
         START_SCREEN_VIEW("start_screen_view"),
         START_CHECKIN("start_checkin"),
+        STOP_SCREEN_VIEW("stop_screen_view"),
+        STOP_CHECKIN("stop_checkin"),
         UNKNOWN("unknown");
 
         companion object {

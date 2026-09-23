@@ -38,7 +38,10 @@ import org.webrtc.VideoSource
  * NÃO TESTADO em aparelho — escrito para ser o ponto de partida do WebRTC. Espere
  * ajustes (versão da lib, nomes de API, TURN) na primeira execução real.
  */
-class WebRtcTransport(context: Context) : MediaTransport {
+class WebRtcTransport(
+    context: Context,
+    private val onClosed: () -> Unit = {},
+) : MediaTransport {
 
     private val appContext = context.applicationContext
     private val client = SupabaseClient(appContext)
@@ -220,6 +223,8 @@ class WebRtcTransport(context: Context) : MediaTransport {
         peerConnection = null
         scope.cancel()
         eglBase.release()
+        // Avisa o serviço para se encerrar (e a notificação sumir).
+        runCatching { onClosed() }
     }
 
     companion object {
