@@ -7,8 +7,8 @@
 <style>
   :root {
     --primary: #00695c; --primary-dark: #004d40; --bg: #f4f6f8;
-    --card: #ffffff; --text: #263238; --muted: #607d8b; --danger: #c62828;
-    --ok: #2e7d32; --border: #e0e0e0;
+    --card: #fff; --text: #263238; --muted: #607d8b; --danger: #c62828;
+    --border: #e0e0e0;
   }
   * { box-sizing: border-box; }
   body {
@@ -17,76 +17,115 @@
   }
   header {
     background: var(--primary); color: #fff; padding: 16px 20px;
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 10px; justify-content: space-between;
   }
-  header h1 { font-size: 18px; margin: 0; }
+  header h1 { font-size: 17px; margin: 0; }
+  header button { background: rgba(255,255,255,.2); padding: 6px 10px; font-size: 13px; }
   main { max-width: 720px; margin: 0 auto; padding: 16px; }
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: 12px;
     padding: 16px; margin-bottom: 16px;
   }
-  .card h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .card h2 {
+    font-size: 13px; margin: 0 0 12px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .5px;
+  }
   label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
   input, select {
-    width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;
-    font-size: 14px;
+    width: 100%; padding: 10px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px;
   }
   button {
     border: none; border-radius: 8px; padding: 12px 14px; font-size: 14px;
     font-weight: 600; cursor: pointer; color: #fff; background: var(--primary);
   }
   button:active { background: var(--primary-dark); }
+  button:disabled { opacity: .5; cursor: default; }
   button.secondary { background: #455a64; }
   button.danger { background: var(--danger); }
+  button.link {
+    background: none; color: var(--primary); padding: 4px; font-weight: 500;
+    text-decoration: underline;
+  }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .row { display: flex; gap: 10px; align-items: center; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .device {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px;
-    cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; padding: 10px;
+    border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer;
   }
   .device.selected { border-color: var(--primary); background: #e0f2f1; }
   .muted { color: var(--muted); font-size: 12px; }
+  .badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    background: #e0f2f1; color: var(--primary-dark); font-weight: 600;
+  }
+  .badge.viewer { background: #eceff1; color: var(--muted); }
+  .code {
+    font-size: 30px; font-weight: 700; letter-spacing: .15em; text-align: center;
+    padding: 12px; user-select: all;
+  }
   .toast {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
     background: #263238; color: #fff; padding: 10px 16px; border-radius: 8px;
     font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none;
+    max-width: 90%; text-align: center;
   }
   .toast.show { opacity: 1; }
   .hidden { display: none; }
-  a { color: var(--primary); }
 </style>
 </head>
 <body>
 <header>
-  <span>🛡️</span>
-  <h1>Controle Infantil — Painel do responsável</h1>
+  <div class="row" style="gap:8px"><span>🛡️</span><h1>Controle Infantil</h1></div>
+  <button id="btnLogout" class="hidden">Sair</button>
 </header>
 <main>
 
-  <!-- Configuração do backend -->
+  <!-- 1. Conexão ao projeto Supabase -->
   <div class="card" id="configCard">
     <h2>Conexão</h2>
     <label>URL do Supabase</label>
     <input id="cfgUrl" placeholder="https://SEU-PROJETO.supabase.co" />
-    <label>Chave anon</label>
+    <label>Chave anon (publishable)</label>
     <input id="cfgKey" placeholder="anon key" />
     <div class="row" style="margin-top:12px">
-      <button id="btnSaveCfg">Salvar e conectar</button>
+      <button id="btnSaveCfg">Salvar</button>
       <span class="muted" id="cfgStatus"></span>
     </div>
   </div>
 
-  <!-- Aparelhos -->
+  <!-- 2. Login do responsável -->
+  <div class="card hidden" id="authCard">
+    <h2><span id="authTitle">Entrar</span></h2>
+    <label>E-mail</label>
+    <input id="authEmail" type="email" autocomplete="email" />
+    <label>Senha</label>
+    <input id="authPassword" type="password" autocomplete="current-password" />
+    <div class="row" style="margin-top:12px">
+      <button id="btnAuth">Entrar</button>
+      <button id="btnToggleAuth" class="link">Criar uma conta</button>
+    </div>
+    <p class="muted" id="authMsg" style="margin-bottom:0"></p>
+  </div>
+
+  <!-- 3. Aparelhos -->
   <div class="card hidden" id="devicesCard">
     <h2>Aparelhos</h2>
     <div id="devicesList"></div>
     <div class="row" style="margin-top:8px">
       <button class="secondary" id="btnRefresh">Atualizar</button>
+      <button class="link" id="btnShowPair">Parear com um código</button>
+    </div>
+    <div id="pairBox" class="hidden" style="margin-top:12px">
+      <label>Código mostrado no celular da criança (ou recebido por convite)</label>
+      <div class="row">
+        <input id="pairCode" placeholder="ABCD 1234" style="flex:1;min-width:140px" />
+        <button id="btnPair">Parear</button>
+      </div>
     </div>
   </div>
 
-  <!-- Comandos -->
+  <!-- 4. Comandos -->
   <div class="card hidden" id="commandsCard">
     <h2>Comandos — <span id="selectedLabel"></span></h2>
     <div class="grid">
@@ -95,13 +134,10 @@
       <button data-cmd="enable_location" class="secondary">🛰️ Ligar GPS</button>
       <button data-cmd="request_location" class="secondary">📍 Pedir localização</button>
     </div>
-    <p class="muted" style="margin-top:12px">
-      Ver a tela e o check-in de vídeo/áudio aparecem aqui quando essas partes forem
-      concluídas (elas mostram o indicador do Android, por transparência).
-    </p>
+    <p class="muted" id="viewerNote" style="margin-top:12px"></p>
   </div>
 
-  <!-- Última localização -->
+  <!-- 5. Localização -->
   <div class="card hidden" id="locationCard">
     <h2>Última localização</h2>
     <div id="locationInfo" class="muted">—</div>
@@ -110,7 +146,24 @@
     </div>
   </div>
 
-  <!-- Histórico de comandos -->
+  <!-- 6. Pessoas com acesso -->
+  <div class="card hidden" id="peopleCard">
+    <h2>Quem tem acesso</h2>
+    <div id="peopleList" class="muted">—</div>
+    <div id="inviteArea" class="hidden" style="margin-top:12px">
+      <div class="row">
+        <select id="inviteRole" style="flex:1;min-width:140px">
+          <option value="viewer">Observador (só vê)</option>
+          <option value="guardian">Guardião (envia comandos)</option>
+        </select>
+        <button id="btnInvite">Gerar convite</button>
+      </div>
+      <div id="inviteCode" class="code"></div>
+      <p class="muted" id="inviteHint"></p>
+    </div>
+  </div>
+
+  <!-- 7. Histórico -->
   <div class="card hidden" id="historyCard">
     <h2>Comandos recentes</h2>
     <div id="historyList" class="muted">—</div>
@@ -120,150 +173,345 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const els = id => document.getElementById(id);
-  const state = { url: '', key: '', devices: [], selected: null };
+const $ = id => document.getElementById(id);
+const state = {
+  url: '', key: '', token: null, userId: null,
+  devices: [], roles: {}, selected: null, signupMode: false
+};
 
-  function toast(msg) {
-    const t = els('toast');
-    t.textContent = msg; t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2200);
-  }
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
 
-  function headers() {
-    return {
-      'apikey': state.key,
-      'Authorization': 'Bearer ' + state.key,
-      'Content-Type': 'application/json'
-    };
-  }
+const esc = s => String(s ?? '').replace(/[&<>"']/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  function rest(path) { return state.url.replace(/\/$/, '') + '/rest/v1/' + path; }
-
-  // ---- Configuração persistida ----
-  function loadCfg() {
-    state.url = localStorage.getItem('ci_url') || '';
-    state.key = localStorage.getItem('ci_key') || '';
-    els('cfgUrl').value = state.url;
-    els('cfgKey').value = state.key;
-    if (state.url && state.key) { connect(); }
-  }
-
-  els('btnSaveCfg').onclick = () => {
-    state.url = els('cfgUrl').value.trim();
-    state.key = els('cfgKey').value.trim();
-    localStorage.setItem('ci_url', state.url);
-    localStorage.setItem('ci_key', state.key);
-    connect();
+// --- Chamadas ao Supabase -------------------------------------------------
+function authHeaders() {
+  return {
+    'apikey': state.key,
+    'Authorization': 'Bearer ' + (state.token || state.key),
+    'Content-Type': 'application/json'
   };
+}
 
-  async function connect() {
-    if (!state.url || !state.key) { toast('Preencha URL e chave'); return; }
-    els('cfgStatus').textContent = 'Conectando...';
-    try {
-      await loadDevices();
-      els('cfgStatus').textContent = '✅ conectado';
-      els('devicesCard').classList.remove('hidden');
-    } catch (e) {
-      els('cfgStatus').textContent = '❌ erro: ' + e.message;
-    }
+async function rpc(fn, args) {
+  const resp = await fetch(state.url + '/rest/v1/rpc/' + fn, {
+    method: 'POST', headers: authHeaders(), body: JSON.stringify(args || {})
+  });
+  const text = await resp.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!resp.ok) {
+    const err = (data && (data.message || data.hint)) || ('HTTP ' + resp.status);
+    throw new Error(traduzErro(err));
   }
+  return data;
+}
 
-  // ---- Aparelhos ----
-  async function loadDevices() {
-    const resp = await fetch(rest('devices?select=id,label,last_seen&order=last_seen.desc'),
-      { headers: headers() });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    state.devices = await resp.json();
-    renderDevices();
+async function select(path) {
+  const resp = await fetch(state.url + '/rest/v1/' + path, { headers: authHeaders() });
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  return resp.json();
+}
+
+function traduzErro(msg) {
+  const m = {
+    not_guardian: 'Você é observador neste aparelho e não pode enviar comandos.',
+    rate_limited: 'Muitos comandos em pouco tempo. Espere um pouco.',
+    last_guardian: 'Não dá para remover o único guardião enquanto houver outras pessoas.',
+    device_already_paired: 'Este aparelho já tem um responsável. Peça um convite a ele.',
+    not_authenticated: 'Sessão expirada. Entre novamente.',
+    invalid_role: 'Tipo de acesso inválido.'
+  };
+  for (const k in m) if (String(msg).includes(k)) return m[k];
+  return msg;
+}
+
+// --- 1. Configuração ------------------------------------------------------
+function loadCfg() {
+  state.url = (localStorage.getItem('ci_url') || '').replace(/\/$/, '');
+  state.key = localStorage.getItem('ci_key') || '';
+  state.token = sessionStorage.getItem('ci_token');
+  state.userId = sessionStorage.getItem('ci_uid');
+  $('cfgUrl').value = state.url;
+  $('cfgKey').value = state.key;
+  if (state.url && state.key) {
+    $('cfgStatus').textContent = '✅ salvo';
+    $('authCard').classList.remove('hidden');
+    if (state.token) enterApp();
   }
+}
 
-  function renderDevices() {
-    const list = els('devicesList');
-    if (!state.devices.length) {
-      list.innerHTML = '<p class="muted">Nenhum aparelho ainda. Instale o app no celular da criança e ele aparecerá aqui.</p>';
+$('btnSaveCfg').onclick = () => {
+  state.url = $('cfgUrl').value.trim().replace(/\/$/, '');
+  state.key = $('cfgKey').value.trim();
+  if (!state.url || !state.key) return toast('Preencha URL e chave');
+  localStorage.setItem('ci_url', state.url);
+  localStorage.setItem('ci_key', state.key);
+  $('cfgStatus').textContent = '✅ salvo';
+  $('authCard').classList.remove('hidden');
+};
+
+// --- 2. Login / cadastro --------------------------------------------------
+$('btnToggleAuth').onclick = () => {
+  state.signupMode = !state.signupMode;
+  $('authTitle').textContent = state.signupMode ? 'Criar conta' : 'Entrar';
+  $('btnAuth').textContent = state.signupMode ? 'Criar conta' : 'Entrar';
+  $('btnToggleAuth').textContent = state.signupMode ? 'Já tenho conta' : 'Criar uma conta';
+  $('authMsg').textContent = '';
+};
+
+$('btnAuth').onclick = async () => {
+  const email = $('authEmail').value.trim();
+  const password = $('authPassword').value;
+  if (!email || !password) return toast('Preencha e-mail e senha');
+  $('btnAuth').disabled = true;
+  $('authMsg').textContent = 'Aguarde…';
+  try {
+    const path = state.signupMode ? '/auth/v1/signup' : '/auth/v1/token?grant_type=password';
+    const resp = await fetch(state.url + path, {
+      method: 'POST',
+      headers: { 'apikey': state.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.msg || data.error_description || data.message || 'Falha');
+    if (!data.access_token) {
+      // Cadastro com confirmação de e-mail ligada.
+      $('authMsg').textContent = 'Conta criada. Confirme pelo e-mail e depois entre.';
       return;
     }
-    list.innerHTML = '';
-    state.devices.forEach(d => {
-      const div = document.createElement('div');
-      div.className = 'device' + (state.selected === d.id ? ' selected' : '');
-      const seen = d.last_seen ? new Date(d.last_seen).toLocaleString('pt-BR') : 'nunca';
-      div.innerHTML = `<div><strong>${escapeHtml(d.label)}</strong>
-        <div class="muted">visto: ${seen}</div>
-        <div class="muted">${d.id}</div></div><span>›</span>`;
-      div.onclick = () => selectDevice(d);
-      list.appendChild(div);
-    });
+    state.token = data.access_token;
+    state.userId = data.user && data.user.id;
+    sessionStorage.setItem('ci_token', state.token);
+    sessionStorage.setItem('ci_uid', state.userId || '');
+    $('authMsg').textContent = '';
+    enterApp();
+  } catch (e) {
+    $('authMsg').textContent = '❌ ' + e.message;
+  } finally {
+    $('btnAuth').disabled = false;
   }
+};
 
-  function selectDevice(d) {
-    state.selected = d.id;
-    els('selectedLabel').textContent = d.label;
-    els('commandsCard').classList.remove('hidden');
-    els('locationCard').classList.remove('hidden');
-    els('historyCard').classList.remove('hidden');
+$('btnLogout').onclick = () => {
+  sessionStorage.clear();
+  location.reload();
+};
+
+async function enterApp() {
+  $('authCard').classList.add('hidden');
+  $('configCard').classList.add('hidden');
+  $('btnLogout').classList.remove('hidden');
+  $('devicesCard').classList.remove('hidden');
+  // Sem o id do usuário não dá para saber quem é guardião; busca se faltar.
+  if (!state.userId) {
+    try {
+      const u = await (await fetch(state.url + '/auth/v1/user',
+        { headers: authHeaders() })).json();
+      if (u && u.id) {
+        state.userId = u.id;
+        sessionStorage.setItem('ci_uid', u.id);
+      }
+    } catch { /* segue; loadDevices trata o 401 */ }
+  }
+  loadDevices();
+}
+
+// --- 3. Aparelhos ---------------------------------------------------------
+async function loadDevices() {
+  try {
+    const [devices, links] = await Promise.all([
+      select('devices?select=id,label,last_seen&order=last_seen.desc.nullslast'),
+      select('device_controllers?select=device_id,role,controller_id')
+    ]);
+    state.devices = devices;
+    state.roles = {};
+    links.filter(l => l.controller_id === state.userId)
+         .forEach(l => { state.roles[l.device_id] = l.role; });
     renderDevices();
-    loadHistory();
+  } catch (e) {
+    if (String(e.message).includes('401')) {
+      toast('Sessão expirada. Entre novamente.');
+      sessionStorage.clear();
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      toast('Erro ao carregar: ' + e.message);
+    }
   }
+}
 
-  els('btnRefresh').onclick = loadDevices;
-
-  // ---- Comandos ----
-  document.querySelectorAll('[data-cmd]').forEach(btn => {
-    btn.onclick = () => sendCommand(btn.getAttribute('data-cmd'));
+function renderDevices() {
+  const list = $('devicesList');
+  if (!state.devices.length) {
+    list.innerHTML = '<p class="muted">Nenhum aparelho ainda. Gere o código no celular ' +
+      'da criança (Configuração do responsável) e use "Parear com um código".</p>';
+    return;
+  }
+  list.innerHTML = '';
+  state.devices.forEach(d => {
+    const role = state.roles[d.id] || 'viewer';
+    const div = document.createElement('div');
+    div.className = 'device' + (state.selected === d.id ? ' selected' : '');
+    const seen = d.last_seen ? new Date(d.last_seen).toLocaleString('pt-BR') : 'nunca';
+    div.innerHTML =
+      `<div><strong>${esc(d.label)}</strong>
+         <span class="badge ${role === 'viewer' ? 'viewer' : ''}">
+           ${role === 'guardian' ? 'guardião' : 'observador'}</span>
+         <div class="muted">visto: ${seen}</div></div><span>›</span>`;
+    div.onclick = () => selectDevice(d);
+    list.appendChild(div);
   });
+}
 
-  async function sendCommand(type) {
-    if (!state.selected) { toast('Escolha um aparelho'); return; }
-    const confirmMsg = { reboot: 'Reiniciar o aparelho agora?' }[type];
-    if (confirmMsg && !confirm(confirmMsg)) return;
-    const resp = await fetch(rest('commands'), {
-      method: 'POST',
-      headers: { ...headers(), 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ device_id: state.selected, type, payload: {} })
-    });
-    if (resp.ok) { toast('Comando enviado ✅'); setTimeout(loadHistory, 800); }
-    else { toast('Erro ao enviar: HTTP ' + resp.status); }
-  }
+function selectDevice(d) {
+  state.selected = d.id;
+  const isGuardian = state.roles[d.id] === 'guardian';
+  $('selectedLabel').textContent = d.label;
+  ['commandsCard', 'locationCard', 'peopleCard', 'historyCard']
+    .forEach(c => $(c).classList.remove('hidden'));
+  document.querySelectorAll('[data-cmd]').forEach(b => { b.disabled = !isGuardian; });
+  $('viewerNote').textContent = isGuardian
+    ? '' : 'Você é observador neste aparelho: pode ver, mas não enviar comandos.';
+  $('inviteArea').classList.toggle('hidden', !isGuardian);
+  $('inviteCode').textContent = '';
+  $('inviteHint').textContent = '';
+  renderDevices();
+  loadHistory();
+  loadPeople();
+}
 
-  // ---- Localização ----
-  els('btnLoadLocation').onclick = async () => {
-    if (!state.selected) { toast('Escolha um aparelho'); return; }
-    const resp = await fetch(
-      rest(`locations?device_id=eq.${state.selected}&order=created_at.desc&limit=1`),
-      { headers: headers() });
-    const rows = await resp.json();
-    if (!rows.length) { els('locationInfo').textContent = 'Sem localização registrada ainda.'; return; }
+$('btnRefresh').onclick = loadDevices;
+$('btnShowPair').onclick = () => $('pairBox').classList.toggle('hidden');
+
+$('btnPair').onclick = async () => {
+  const code = $('pairCode').value.replace(/\s+/g, '').toUpperCase();
+  if (code.length !== 8) return toast('O código tem 8 caracteres');
+  try {
+    const r = await rpc('controller_claim_code', { p_code: code });
+    if (r && r.ok) {
+      toast('Pareado ✅');
+      $('pairCode').value = '';
+      $('pairBox').classList.add('hidden');
+      loadDevices();
+    } else {
+      const e = r && r.error;
+      toast(e === 'too_many_attempts'
+        ? 'Muitas tentativas erradas. Tente daqui a uma hora.'
+        : 'Código inválido ou expirado.');
+    }
+  } catch (e) { toast(e.message); }
+};
+
+// --- 4. Comandos ----------------------------------------------------------
+document.querySelectorAll('[data-cmd]').forEach(btn => {
+  btn.onclick = () => sendCommand(btn.getAttribute('data-cmd'));
+});
+
+async function sendCommand(type) {
+  if (!state.selected) return toast('Escolha um aparelho');
+  if (type === 'reboot' && !confirm('Reiniciar o aparelho agora?')) return;
+  try {
+    await rpc('controller_send_command', { p_device: state.selected, p_type: type });
+    toast('Comando enviado ✅');
+    setTimeout(loadHistory, 800);
+  } catch (e) { toast(e.message); }
+}
+
+// --- 5. Localização -------------------------------------------------------
+$('btnLoadLocation').onclick = async () => {
+  if (!state.selected) return toast('Escolha um aparelho');
+  try {
+    const rows = await select(
+      `locations?device_id=eq.${state.selected}&order=created_at.desc&limit=1`);
+    if (!rows.length) {
+      $('locationInfo').textContent = 'Sem localização registrada ainda.';
+      return;
+    }
     const l = rows[0];
-    const when = new Date(l.created_at).toLocaleString('pt-BR');
-    els('locationInfo').innerHTML =
+    $('locationInfo').innerHTML =
       `📍 ${l.lat.toFixed(5)}, ${l.lon.toFixed(5)} (±${Math.round(l.accuracy || 0)}m)<br>
-       <span class="muted">${when}</span><br>
-       <a href="https://maps.google.com/?q=${l.lat},${l.lon}" target="_blank">Abrir no mapa</a>`;
-  };
+       <span class="muted">${new Date(l.created_at).toLocaleString('pt-BR')}</span><br>
+       <a href="https://maps.google.com/?q=${l.lat},${l.lon}" target="_blank"
+          rel="noopener">Abrir no mapa</a>`;
+  } catch (e) { toast(e.message); }
+};
 
-  // ---- Histórico ----
-  async function loadHistory() {
-    if (!state.selected) return;
-    const resp = await fetch(
-      rest(`commands?device_id=eq.${state.selected}&order=created_at.desc&limit=8&select=type,status,created_at,result_detail`),
-      { headers: headers() });
-    const rows = await resp.json();
-    if (!rows.length) { els('historyList').textContent = 'Nenhum comando ainda.'; return; }
-    els('historyList').innerHTML = rows.map(r => {
-      const when = new Date(r.created_at).toLocaleTimeString('pt-BR');
-      const icon = r.status === 'done' ? '✅' : r.status === 'error' ? '⚠️' : '⏳';
-      const detail = r.result_detail ? ` — ${escapeHtml(r.result_detail)}` : '';
-      return `<div>${icon} <strong>${r.type}</strong> <span class="muted">${when}${detail}</span></div>`;
+// --- 6. Pessoas com acesso ------------------------------------------------
+async function loadPeople() {
+  try {
+    const [links, people] = await Promise.all([
+      select(`device_controllers?device_id=eq.${state.selected}&select=controller_id,role`),
+      select('controllers?select=id,email,name')
+    ]);
+    const byId = {};
+    people.forEach(p => { byId[p.id] = p; });
+    $('peopleList').innerHTML = links.map(l => {
+      const p = byId[l.controller_id] || {};
+      const who = esc(p.name || p.email || l.controller_id.slice(0, 8));
+      const eu = l.controller_id === state.userId ? ' (você)' : '';
+      const papel = l.role === 'guardian' ? 'guardião' : 'observador';
+      const podeRemover = state.roles[state.selected] === 'guardian'
+        || l.controller_id === state.userId;
+      const botao = podeRemover
+        ? `<button class="link" data-unlink="${l.controller_id}">remover</button>` : '';
+      return `<div class="row" style="justify-content:space-between">
+                <span>${who}${eu} — ${papel}</span>${botao}</div>`;
     }).join('');
-  }
+    $('peopleList').querySelectorAll('[data-unlink]').forEach(b => {
+      b.onclick = () => unlink(b.getAttribute('data-unlink'));
+    });
+  } catch (e) { $('peopleList').textContent = 'Erro: ' + e.message; }
+}
 
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
+async function unlink(controllerId) {
+  const eu = controllerId === state.userId;
+  if (!confirm(eu ? 'Sair deste aparelho?' : 'Remover o acesso desta pessoa?')) return;
+  try {
+    await rpc('controller_unlink', { p_device: state.selected, p_controller: controllerId });
+    toast('Feito ✅');
+    if (eu) { state.selected = null; loadDevices();
+      ['commandsCard','locationCard','peopleCard','historyCard']
+        .forEach(c => $(c).classList.add('hidden')); }
+    else loadPeople();
+  } catch (e) { toast(e.message); }
+}
 
-  loadCfg();
+$('btnInvite').onclick = async () => {
+  try {
+    const r = await rpc('controller_create_invite', {
+      p_device: state.selected, p_role: $('inviteRole').value
+    });
+    const row = Array.isArray(r) ? r[0] : r;
+    const c = row.code;
+    $('inviteCode').textContent = c.slice(0, 4) + ' ' + c.slice(4);
+    $('inviteHint').textContent =
+      'Passe este código para a pessoa. Vale até ' +
+      new Date(row.expires_at).toLocaleTimeString('pt-BR') + ' e serve uma vez só.';
+  } catch (e) { toast(e.message); }
+};
+
+// --- 7. Histórico ---------------------------------------------------------
+async function loadHistory() {
+  if (!state.selected) return;
+  try {
+    const rows = await select(
+      `commands?device_id=eq.${state.selected}&order=created_at.desc&limit=8` +
+      `&select=type,status,created_at,result_detail`);
+    if (!rows.length) { $('historyList').textContent = 'Nenhum comando ainda.'; return; }
+    const icones = { done: '✅', error: '⚠️', expired: '⌛', pending: '⏳' };
+    $('historyList').innerHTML = rows.map(r =>
+      `<div>${icones[r.status] || '•'} <strong>${esc(r.type)}</strong>
+        <span class="muted">${new Date(r.created_at).toLocaleTimeString('pt-BR')}${
+          r.result_detail ? ' — ' + esc(r.result_detail) : ''}</span></div>`).join('');
+  } catch (e) { $('historyList').textContent = 'Erro: ' + e.message; }
+}
+
+loadCfg();
 </script>
 </body>
 </html>

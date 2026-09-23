@@ -17,8 +17,8 @@ tela, e isso é proposital.
 | Recurso | Situação | Como |
 |---|---|---|
 | 🔒 Bloquear a tela remotamente | ✅ Funciona | Device Admin (`lockNow`) |
-| 🧩 Fechar / bloquear apps | ✅ Funciona | Launcher em modo quiosque (só apps liberados) |
-| ⏰ Limites de horário | ✅ Funciona | Regras no launcher + política |
+| 🧩 Bloquear apps | ⚙️ Parcial | Launcher em quiosque já filtra, mas **falta a tela para escolher** quais apps liberar |
+| ⏰ Limites de horário | ❌ Ainda não | Nada implementado |
 | 📍 Localização | ✅ Funciona | FusedLocation, reporta ao painel |
 | 🛰️ Ligar o GPS se estiver desligado | ✅ Funciona | Device Owner (`setLocationEnabled`) |
 | 🔁 Reiniciar o aparelho | ✅ Funciona | Device Owner (`reboot`) |
@@ -56,13 +56,39 @@ tela, e isso é proposital.
    ADB em um aparelho recém-resetado. O passo a passo está em
    [`docs/PROVISIONAMENTO.md`](docs/PROVISIONAMENTO.md).
 2. **Backend:** rode o [`supabase/schema.sql`](supabase/schema.sql) no seu projeto Supabase.
-   > ⚠️ **Em andamento:** o schema já tem a versão segura (login dos controladores,
-   > token por aparelho, funções no lugar de acesso direto às tabelas), mas o app
-   > Android e o painel **ainda usam o acesso antigo** e param de funcionar com ele.
-   > Não aplique em produção até essa adaptação ser concluída e testada.
 3. **Configuração do app:** preencha a URL e a chave do Supabase (veja
    `app/src/main/java/com/controleinfantil/kids/remote/SupabaseConfig.kt`).
 4. **Build:** abra a pasta no Android Studio e rode no aparelho.
+5. **Painel:** abra `painel/index.html` no navegador, informe a mesma URL e chave,
+   crie sua conta e pareie (passo abaixo).
+
+## Como parear
+
+1. No celular da criança, abra a área do responsável (toque longo em "Meus
+   aplicativos") e toque em **"Gerar código de pareamento"**.
+2. No painel, entre com sua conta e use **"Parear com um código"**. O código tem 8
+   caracteres, vale 15 minutos e serve uma única vez.
+3. Quem pareia primeiro vira **guardião**. Para dar acesso a outra pessoa da
+   família, o guardião gera um **convite** no painel, escolhendo:
+   - **Guardião** — envia comandos, convida e remove pessoas;
+   - **Observador** — só vê aparelho, localização e histórico.
+
+## Segurança
+
+- Os responsáveis entram com **login** (Supabase Auth); cada um só enxerga os
+  aparelhos aos quais foi vinculado.
+- O celular da criança **não acessa as tabelas**: ele recebe um **token secreto** no
+  registro (o banco guarda apenas o hash SHA-256) e age só por funções que conferem
+  esse token.
+- Comandos parados há mais de **10 minutos expiram**, para que um "reiniciar"
+  esquecido não dispare horas depois. Há limite de 30 comandos por 10 minutos.
+- Códigos de pareamento errados são limitados a **10 tentativas por hora** por conta.
+
+> **Risco conhecido:** a função de registro de aparelho é aberta (como precisa ser,
+> já que o celular ainda não tem identidade). Quem tiver a chave `anon` pode criar
+> registros vazios de aparelho. Eles não dão acesso a nada — ficam sem responsável
+> vinculado — mas ocupam espaço. Se isso virar problema, o próximo passo é registrar
+> o aparelho por uma Edge Function com verificação extra.
 
 ## Aviso legal e ético
 

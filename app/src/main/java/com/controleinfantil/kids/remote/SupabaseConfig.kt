@@ -13,7 +13,4 @@ package com.controleinfantil.kids.remote
 object SupabaseConfig {
     const val URL = "https://SEU-PROJETO.supabase.co"
     const val ANON_KEY = "COLE_SUA_ANON_KEY_AQUI"
-
-    /** REST base do PostgREST. */
-    val restUrl: String get() = "$URL/rest/v1"
 }

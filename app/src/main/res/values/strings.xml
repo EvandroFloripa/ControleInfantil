@@ -7,7 +7,15 @@
     <string name="setup_title">Configuração do responsável</string>
     <string name="status_fmt">Device Admin: %1$s\nDevice Owner: %2$s</string>
     <string name="device_id_fmt">ID do aparelho:\n%1$s</string>
+    <string name="device_not_registered">Aparelho ainda não registrado no servidor.\nVerifique a conexão e os dados em SupabaseConfig.</string>
     <string name="enable_admin">Ativar proteção (Device Admin)</string>
     <string name="admin_explanation">O Controle Infantil precisa desta permissão para bloquear a tela e proteger o aparelho da criança.</string>
-    <string name="setup_hint">Para reiniciar o aparelho e forçar o GPS, o app precisa ser instalado como Device Owner via ADB (veja docs/PROVISIONAMENTO.md). Anote o ID do aparelho acima para cadastrá-lo no painel do controlador.</string>
+
+    <string name="pairing_title">Parear com o responsável</string>
+    <string name="pairing_button">Gerar código de pareamento</string>
+    <string name="pairing_generating">Gerando…</string>
+    <string name="pairing_code_fmt">%1$s</string>
+    <string name="pairing_error">Não foi possível gerar o código.\nO aparelho pode já estar pareado — nesse caso, peça um convite no painel.</string>
+
+    <string name="setup_hint">Digite o código acima no painel do responsável em até 15 minutos. Ele serve uma única vez e só funciona para o primeiro responsável; os demais entram por convite gerado no painel.\n\nPara reiniciar o aparelho e forçar o GPS, o app precisa ser instalado como Device Owner via ADB (veja docs/PROVISIONAMENTO.md).</string>
 </resources>

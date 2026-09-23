@@ -38,7 +38,7 @@ class CommandService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        client = SupabaseClient(DeviceIdentity.id(this))
+        client = SupabaseClient(this)
         policy = PolicyManager(this)
         location = LocationReporter(this)
         // Em Android 14+ iniciar um serviço em primeiro plano do tipo "location"
@@ -58,10 +58,14 @@ class CommandService : Service() {
     }
 
     private suspend fun pollLoop() {
-        client.upsertDevice(DeviceIdentity.label(this))
         while (scope.isActive) {
             try {
-                client.fetchPendingCommands().forEach { execute(it) }
+                if (client.ensureRegistered()) {
+                    client.heartbeat()
+                    client.fetchPendingCommands().forEach { execute(it) }
+                } else {
+                    Log.w(TAG, "Aparelho ainda não registrado (verifique SupabaseConfig)")
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Erro no ciclo de polling", e)
             }
