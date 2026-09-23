@@ -10,6 +10,8 @@ import androidx.lifecycle.lifecycleScope
 import com.controleinfantil.kids.R
 import com.controleinfantil.kids.admin.DeviceAdmin
 import com.controleinfantil.kids.admin.PolicyManager
+import com.controleinfantil.kids.launcher.AppPickerActivity
+import com.controleinfantil.kids.launcher.KioskManager
 import com.controleinfantil.kids.remote.DeviceIdentity
 import com.controleinfantil.kids.remote.SupabaseClient
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +35,9 @@ class SetupActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnEnableAdmin).setOnClickListener { requestDeviceAdmin() }
         findViewById<Button>(R.id.btnPairingCode).setOnClickListener { generatePairingCode() }
+        findViewById<Button>(R.id.btnChooseApps).setOnClickListener {
+            startActivity(Intent(this, AppPickerActivity::class.java))
+        }
 
         refreshStatus()
     }
@@ -52,6 +57,10 @@ class SetupActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.deviceId).text =
             if (id != null) getString(R.string.device_id_fmt, id)
             else getString(R.string.device_not_registered)
+
+        val liberados = KioskManager(this).allowedPackages.size
+        findViewById<TextView>(R.id.allowedSummary).text =
+            resources.getQuantityString(R.plurals.picker_count, liberados, liberados)
     }
 
     private fun requestDeviceAdmin() {
@@ -71,15 +80,29 @@ class SetupActivity : AppCompatActivity() {
 
     private fun generatePairingCode() {
         val codeView = findViewById<TextView>(R.id.pairingCode)
+        codeView.textSize = 14f
+        codeView.letterSpacing = 0f
         codeView.text = getString(R.string.pairing_generating)
         lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                if (!client.ensureRegistered()) null else client.createPairingCode()
+            val result = withContext(Dispatchers.IO) { client.createPairingCode() }
+            // Código grande e espaçado; mensagem de erro em texto normal.
+            val isCode = result is SupabaseClient.PairingResult.Success
+            codeView.textSize = if (isCode) 28f else 14f
+            codeView.letterSpacing = if (isCode) 0.15f else 0f
+            codeView.text = when (result) {
+                is SupabaseClient.PairingResult.Success ->
+                    getString(R.string.pairing_code_fmt, spaced(result.code))
+                SupabaseClient.PairingResult.NotConfigured ->
+                    getString(R.string.pairing_error_not_configured)
+                SupabaseClient.PairingResult.NoNetwork ->
+                    getString(R.string.pairing_error_network)
+                SupabaseClient.PairingResult.AlreadyPaired ->
+                    getString(R.string.pairing_error_already_paired)
+                SupabaseClient.PairingResult.Failed ->
+                    getString(R.string.pairing_error_generic)
             }
-            codeView.text = when {
-                result == null -> getString(R.string.pairing_error)
-                else -> getString(R.string.pairing_code_fmt, spaced(result.code))
-            }
+            // O registro pode ter acabado de acontecer: reflete o ID novo.
+            refreshStatus()
         }
     }
 

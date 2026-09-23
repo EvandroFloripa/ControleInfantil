@@ -26,10 +26,17 @@ class KioskManager(private val context: Context) {
 
     private val isOwner: Boolean get() = dpm.isDeviceOwnerApp(context.packageName)
 
-    /** Pacotes que a criança pode abrir. */
+    /**
+     * Pacotes que a criança pode abrir, escolhidos pelo responsável. Não inclui o
+     * próprio Controle Infantil — ele é acrescentado só no Lock Task, que precisa
+     * dele para fixar o launcher.
+     */
     var allowedPackages: Set<String>
-        get() = prefs.getStringSet(KEY_ALLOWED, defaultAllowed()) ?: defaultAllowed()
-        set(value) = prefs.edit().putStringSet(KEY_ALLOWED, value).apply()
+        get() = prefs.getStringSet(KEY_ALLOWED, emptySet()) ?: emptySet()
+        set(value) {
+            prefs.edit().putStringSet(KEY_ALLOWED, value).apply()
+            applyLockTaskAllowlist()
+        }
 
     fun allow(pkg: String) {
         allowedPackages = allowedPackages + pkg
@@ -46,7 +53,9 @@ class KioskManager(private val context: Context) {
     fun applyLockTaskAllowlist() {
         if (!isOwner) return
         try {
-            dpm.setLockTaskPackages(admin, allowedPackages.toTypedArray())
+            // O nosso pacote precisa entrar para o launcher poder ser fixado.
+            val packages = allowedPackages + context.packageName
+            dpm.setLockTaskPackages(admin, packages.toTypedArray())
         } catch (e: SecurityException) {
             Log.e(TAG, "setLockTaskPackages falhou", e)
         }
@@ -61,8 +70,6 @@ class KioskManager(private val context: Context) {
             Log.e(TAG, "startLockTask falhou", e)
         }
     }
-
-    private fun defaultAllowed(): Set<String> = setOf(context.packageName)
 
     companion object {
         private const val TAG = "KioskManager"

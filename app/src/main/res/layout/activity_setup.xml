@@ -38,6 +38,20 @@
             android:layout_height="wrap_content"
             android:text="@string/enable_admin" />
 
+        <Button
+            android:id="@+id/btnChooseApps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/choose_apps"
+            android:layout_marginTop="12dp" />
+
+        <TextView
+            android:id="@+id/allowedSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:paddingTop="6dp" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"

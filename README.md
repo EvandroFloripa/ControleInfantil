@@ -17,7 +17,7 @@ tela, e isso é proposital.
 | Recurso | Situação | Como |
 |---|---|---|
 | 🔒 Bloquear a tela remotamente | ✅ Funciona | Device Admin (`lockNow`) |
-| 🧩 Bloquear apps | ⚙️ Parcial | Launcher em quiosque já filtra, mas **falta a tela para escolher** quais apps liberar |
+| 🧩 Bloquear apps | ✅ Funciona | Tela para escolher os apps liberados + launcher em quiosque |
 | ⏰ Limites de horário | ❌ Ainda não | Nada implementado |
 | 📍 Localização | ✅ Funciona | FusedLocation, reporta ao painel |
 | 🛰️ Ligar o GPS se estiver desligado | ✅ Funciona | Device Owner (`setLocationEnabled`) |
@@ -61,6 +61,13 @@ tela, e isso é proposital.
 4. **Build:** abra a pasta no Android Studio e rode no aparelho.
 5. **Painel:** abra `painel/index.html` no navegador, informe a mesma URL e chave,
    crie sua conta e pareie (passo abaixo).
+
+## Escolher os apps da criança
+
+Na área do responsável (toque longo em "Meus aplicativos"), use **"Escolher os apps
+liberados"**. Marque os aplicativos e toque em Salvar — só os marcados aparecem na
+tela inicial da criança. Enquanto nada estiver marcado, a tela dela fica vazia com
+um aviso explicando onde configurar.
 
 ## Como parear
 

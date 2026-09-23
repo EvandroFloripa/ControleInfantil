@@ -17,6 +17,16 @@
         android:gravity="center"
         android:paddingVertical="16dp" />
 
+    <TextView
+        android:id="@+id/emptyHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/launcher_empty"
+        android:textColor="@color/kidText"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/appsGrid"
         android:layout_width="match_parent"

@@ -11,11 +11,27 @@
     <string name="enable_admin">Ativar proteção (Device Admin)</string>
     <string name="admin_explanation">O Controle Infantil precisa desta permissão para bloquear a tela e proteger o aparelho da criança.</string>
 
+    <string name="choose_apps">Escolher os apps liberados</string>
+    <string name="picker_title">Apps liberados</string>
+    <string name="picker_hint">Marque os aplicativos que a criança pode abrir. Os que ficarem desmarcados não aparecem na tela inicial dela.</string>
+    <string name="picker_save">Salvar</string>
+    <string name="picker_empty">Nenhum aplicativo encontrado neste aparelho.</string>
+    <string name="picker_check_desc">Liberar este aplicativo</string>
+    <plurals name="picker_count">
+        <item quantity="one">%d app liberado</item>
+        <item quantity="other">%d apps liberados</item>
+    </plurals>
+
     <string name="pairing_title">Parear com o responsável</string>
     <string name="pairing_button">Gerar código de pareamento</string>
     <string name="pairing_generating">Gerando…</string>
     <string name="pairing_code_fmt">%1$s</string>
-    <string name="pairing_error">Não foi possível gerar o código.\nO aparelho pode já estar pareado — nesse caso, peça um convite no painel.</string>
+    <string name="pairing_error_not_configured">Preencha a URL e a chave do Supabase em SupabaseConfig.kt e reinstale o app.</string>
+    <string name="pairing_error_network">Sem conexão com o servidor. Verifique a internet e tente de novo.</string>
+    <string name="pairing_error_already_paired">Este aparelho já tem um responsável. Peça a ele um convite pelo painel.</string>
+    <string name="pairing_error_generic">Não foi possível gerar o código. Tente novamente.</string>
+
+    <string name="launcher_empty">Nenhum app liberado ainda.\n\nO responsável escolhe os apps na área de configuração (toque e segure no título).</string>
 
     <string name="setup_hint">Digite o código acima no painel do responsável em até 15 minutos. Ele serve uma única vez e só funciona para o primeiro responsável; os demais entram por convite gerado no painel.\n\nPara reiniciar o aparelho e forçar o GPS, o app precisa ser instalado como Device Owner via ADB (veja docs/PROVISIONAMENTO.md).</string>
 </resources>

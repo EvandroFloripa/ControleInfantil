@@ -198,14 +198,62 @@ function authHeaders() {
   };
 }
 
+/**
+ * Troca o refresh_token por um acesso novo. O token do Supabase vale cerca de uma
+ * hora; sem isto o painel começaria a dar "JWT expired" e jogaria para o login.
+ * Retorna true se renovou.
+ */
+async function refreshSession() {
+  const rt = sessionStorage.getItem('ci_refresh');
+  if (!rt) return false;
+  try {
+    const resp = await fetch(state.url + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'apikey': state.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: rt })
+    });
+    if (!resp.ok) return false;
+    const data = await resp.json();
+    if (!data.access_token) return false;
+    saveSession(data);
+    return true;
+  } catch { return false; }
+}
+
+function saveSession(data) {
+  state.token = data.access_token;
+  sessionStorage.setItem('ci_token', data.access_token);
+  if (data.refresh_token) sessionStorage.setItem('ci_refresh', data.refresh_token);
+  if (data.user && data.user.id) {
+    state.userId = data.user.id;
+    sessionStorage.setItem('ci_uid', data.user.id);
+  }
+}
+
+/** Faz a chamada e, se o token tiver expirado, renova e tenta uma vez mais. */
+async function withAuth(doFetch) {
+  let resp = await doFetch();
+  if (resp.status === 401 && await refreshSession()) {
+    resp = await doFetch();
+  }
+  return resp;
+}
+
+function sessionExpired() {
+  toast('Sessão expirada. Entre novamente.');
+  sessionStorage.clear();
+  setTimeout(() => location.reload(), 1500);
+}
+
 async function rpc(fn, args) {
-  const resp = await fetch(state.url + '/rest/v1/rpc/' + fn, {
+  const resp = await withAuth(() => fetch(state.url + '/rest/v1/rpc/' + fn, {
     method: 'POST', headers: authHeaders(), body: JSON.stringify(args || {})
-  });
+  }));
   const text = await resp.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
   if (!resp.ok) {
+    if (resp.status === 401) { sessionExpired(); throw new Error('Sessão expirada.'); }
     const err = (data && (data.message || data.hint)) || ('HTTP ' + resp.status);
     throw new Error(traduzErro(err));
   }
@@ -213,7 +261,8 @@ async function rpc(fn, args) {
 }
 
 async function select(path) {
-  const resp = await fetch(state.url + '/rest/v1/' + path, { headers: authHeaders() });
+  const resp = await withAuth(
+    () => fetch(state.url + '/rest/v1/' + path, { headers: authHeaders() }));
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
   return resp.json();
 }
@@ -285,10 +334,7 @@ $('btnAuth').onclick = async () => {
       $('authMsg').textContent = 'Conta criada. Confirme pelo e-mail e depois entre.';
       return;
     }
-    state.token = data.access_token;
-    state.userId = data.user && data.user.id;
-    sessionStorage.setItem('ci_token', state.token);
-    sessionStorage.setItem('ci_uid', state.userId || '');
+    saveSession(data);
     $('authMsg').textContent = '';
     enterApp();
   } catch (e) {
@@ -335,13 +381,9 @@ async function loadDevices() {
          .forEach(l => { state.roles[l.device_id] = l.role; });
     renderDevices();
   } catch (e) {
-    if (String(e.message).includes('401')) {
-      toast('Sessão expirada. Entre novamente.');
-      sessionStorage.clear();
-      setTimeout(() => location.reload(), 1500);
-    } else {
-      toast('Erro ao carregar: ' + e.message);
-    }
+    // 401 aqui significa que nem a renovação resolveu.
+    if (String(e.message).includes('401')) sessionExpired();
+    else toast('Erro ao carregar: ' + e.message);
   }
 }
 

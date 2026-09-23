@@ -33,6 +33,18 @@ object DeviceIdentity {
             .apply()
     }
 
+    /**
+     * Esquece o registro. Usado quando o servidor recusa o token (backend
+     * recriado, aparelho apagado). O app se registra de novo no próximo ciclo —
+     * como vira um aparelho novo, o pareamento precisa ser refeito.
+     */
+    fun clear(context: Context) {
+        prefs(context).edit()
+            .remove(KEY_ID)
+            .remove(KEY_TOKEN)
+            .apply()
+    }
+
     fun label(context: Context): String =
         prefs(context).getString(KEY_LABEL, null) ?: "Celular da criança"
 

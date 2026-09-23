@@ -39,6 +39,11 @@
             android:name=".setup.SetupActivity"
             android:exported="false" />
 
+        <!-- Escolha dos apps que a criança pode abrir -->
+        <activity
+            android:name=".launcher.AppPickerActivity"
+            android:exported="false" />
+
         <!-- Receiver de Device Admin / Device Owner -->
         <receiver
             android:name=".admin.DeviceAdmin"
