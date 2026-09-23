@@ -56,6 +56,10 @@ tela, e isso é proposital.
    ADB em um aparelho recém-resetado. O passo a passo está em
    [`docs/PROVISIONAMENTO.md`](docs/PROVISIONAMENTO.md).
 2. **Backend:** rode o [`supabase/schema.sql`](supabase/schema.sql) no seu projeto Supabase.
+   > ⚠️ **Em andamento:** o schema já tem a versão segura (login dos controladores,
+   > token por aparelho, funções no lugar de acesso direto às tabelas), mas o app
+   > Android e o painel **ainda usam o acesso antigo** e param de funcionar com ele.
+   > Não aplique em produção até essa adaptação ser concluída e testada.
 3. **Configuração do app:** preencha a URL e a chave do Supabase (veja
    `app/src/main/java/com/controleinfantil/kids/remote/SupabaseConfig.kt`).
 4. **Build:** abra a pasta no Android Studio e rode no aparelho.
