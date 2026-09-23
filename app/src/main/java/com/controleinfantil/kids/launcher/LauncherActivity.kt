@@ -13,6 +13,8 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.controleinfantil.kids.R
 import com.controleinfantil.kids.remote.CommandService
+import com.controleinfantil.kids.schedule.Verdict
+import com.controleinfantil.kids.schedule.checkRules
 import com.controleinfantil.kids.setup.SetupActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -50,17 +52,38 @@ class LauncherActivity : AppCompatActivity() {
     }
 
     private fun refreshApps() {
+        // Fora do horário, nem carrega a lista: a criança vê o aviso de descanso.
+        val verdict = checkRules(this)
+        val blockedView = findViewById<TextView>(R.id.blockedHint)
+        val emptyView = findViewById<TextView>(R.id.emptyHint)
+        if (verdict.blocked) {
+            blockedView.text = blockedMessage(verdict)
+            blockedView.visibility = View.VISIBLE
+            emptyView.visibility = View.GONE
+            recycler.visibility = View.GONE
+            return
+        }
+        blockedView.visibility = View.GONE
+        recycler.visibility = View.VISIBLE
+
         lifecycleScope.launch {
             val allowed = kiosk.allowedPackages
             val apps = withContext(Dispatchers.IO) {
                 launchableApps().filter { it.packageName in allowed }
             }
-            findViewById<TextView>(R.id.emptyHint).visibility =
-                if (apps.isEmpty()) View.VISIBLE else View.GONE
+            emptyView.visibility = if (apps.isEmpty()) View.VISIBLE else View.GONE
             recycler.adapter = AppsAdapter(apps) { pkg ->
                 packageManager.getLaunchIntentForPackage(pkg)?.let { startActivity(it) }
             }
         }
+    }
+
+    private fun blockedMessage(verdict: Verdict): String = when (verdict) {
+        is Verdict.OutsideWindow ->
+            getString(R.string.blocked_outside_window, verdict.rules.startText, verdict.rules.endText)
+        is Verdict.BudgetSpent ->
+            getString(R.string.blocked_budget_spent, verdict.limitMinutes)
+        Verdict.Allowed -> ""
     }
 
     private class AppsAdapter(

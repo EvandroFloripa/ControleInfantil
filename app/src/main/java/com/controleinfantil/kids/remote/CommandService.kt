@@ -13,6 +13,9 @@ import androidx.core.app.NotificationCompat
 import com.controleinfantil.kids.R
 import com.controleinfantil.kids.admin.PolicyManager
 import com.controleinfantil.kids.location.LocationReporter
+import com.controleinfantil.kids.schedule.UsageTracker
+import com.controleinfantil.kids.schedule.checkRules
+import com.controleinfantil.kids.setup.GuardianArea
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -58,8 +61,15 @@ class CommandService : Service() {
     }
 
     private suspend fun pollLoop() {
+        var lastTick = System.currentTimeMillis()
         while (scope.isActive) {
             try {
+                // Conta o tempo de uso e aplica os limites de horário antes da rede:
+                // sem internet, os limites continuam valendo.
+                val now = System.currentTimeMillis()
+                enforceTimeRules((now - lastTick) / 1000)
+                lastTick = now
+
                 if (client.ensureRegistered()) {
                     client.heartbeat()
                     client.fetchPendingCommands().forEach { execute(it) }
@@ -70,6 +80,21 @@ class CommandService : Service() {
                 Log.e(TAG, "Erro no ciclo de polling", e)
             }
             delay(POLL_INTERVAL_MS)
+        }
+    }
+
+    /**
+     * Soma o tempo usado e, se as regras bloquearem agora, apaga a tela — assim a
+     * criança sai de qualquer app em que esteja, não só do nosso launcher.
+     */
+    private fun enforceTimeRules(elapsedSeconds: Long) {
+        val emUso = UsageTracker.isInUse(this)
+        if (emUso) UsageTracker.record(this, elapsedSeconds)
+
+        // Não interrompe o responsável enquanto ele ajusta as próprias regras.
+        if (emUso && !GuardianArea.inForeground && checkRules(this).blocked) {
+            Log.i(TAG, "Limite de horário atingido; bloqueando a tela")
+            policy.lockNow()
         }
     }
 

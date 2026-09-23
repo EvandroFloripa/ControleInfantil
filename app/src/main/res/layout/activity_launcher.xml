@@ -18,6 +18,17 @@
         android:paddingVertical="16dp" />
 
     <TextView
+        android:id="@+id/blockedHint"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:textColor="@color/kidText"
+        android:textSize="20sp"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/emptyHint"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

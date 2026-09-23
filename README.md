@@ -18,7 +18,7 @@ tela, e isso é proposital.
 |---|---|---|
 | 🔒 Bloquear a tela remotamente | ✅ Funciona | Device Admin (`lockNow`) |
 | 🧩 Bloquear apps | ✅ Funciona | Tela para escolher os apps liberados + launcher em quiosque |
-| ⏰ Limites de horário | ❌ Ainda não | Nada implementado |
+| ⏰ Limites de horário | ✅ Funciona | Janela de horário + teto de tempo por dia |
 | 📍 Localização | ✅ Funciona | FusedLocation, reporta ao painel |
 | 🛰️ Ligar o GPS se estiver desligado | ✅ Funciona | Device Owner (`setLocationEnabled`) |
 | 🔁 Reiniciar o aparelho | ✅ Funciona | Device Owner (`reboot`) |
@@ -68,6 +68,30 @@ Na área do responsável (toque longo em "Meus aplicativos"), use **"Escolher os
 liberados"**. Marque os aplicativos e toque em Salvar — só os marcados aparecem na
 tela inicial da criança. Enquanto nada estiver marcado, a tela dela fica vazia com
 um aviso explicando onde configurar.
+
+## Limites de horário
+
+Na área do responsável, botão **"Limites de horário"**. Dois limites, que valem juntos:
+
+- **Janela de horário** — "pode usar das 08:00 às 20:00". Aceita janela que cruza a
+  meia-noite.
+- **Tempo por dia** — de 15 minutos a 3 horas, ou sem limite.
+
+Quando qualquer um dos dois bloqueia, os apps somem da tela inicial (a criança vê um
+aviso de descanso) e a tela é apagada, tirando a criança de qualquer app em que
+esteja. A mesma tela mostra **quanto já foi usado hoje**, com dois atalhos:
+**"Zerar o tempo de hoje"** e **"Liberar por 15 minutos"**.
+
+Detalhes que valem saber:
+
+- O tempo contado é o de **tela ligada e desbloqueada**, não por aplicativo. Medir
+  por app exigiria a permissão especial de Acesso ao Uso; para limitar o tempo total
+  de uma criança pequena, esta medida basta e não depende de permissão nenhuma.
+- Os limites **funcionam sem internet** — são aplicados no próprio aparelho.
+- Enquanto uma tela do responsável está aberta, o bloqueio fica suspenso, para você
+  não ser interrompido justamente ao ajustar as regras.
+- O limite usa o **relógio do aparelho**. Uma criança de 5 anos dificilmente vai
+  mudar a hora, mas como Device Owner dá para impedir isso — fica como melhoria.
 
 ## Como parear
 

@@ -33,5 +33,26 @@
 
     <string name="launcher_empty">Nenhum app liberado ainda.\n\nO responsável escolhe os apps na área de configuração (toque e segure no título).</string>
 
+    <!-- Limites de horário -->
+    <string name="schedule_button">Limites de horário</string>
+    <string name="schedule_title">Limites de uso</string>
+    <string name="schedule_enable">Ativar limites de horário</string>
+    <string name="schedule_window_label">Pode usar entre</string>
+    <string name="schedule_from">A partir das %1$s</string>
+    <string name="schedule_to">Até as %1$s</string>
+    <string name="schedule_limit_label">Tempo máximo por dia</string>
+    <string name="limit_none">Sem limite de tempo</string>
+    <string name="duration_minutes">%1$d min</string>
+    <string name="duration_hours">%1$dh</string>
+    <string name="duration_hours_minutes">%1$dh%2$02d</string>
+    <string name="used_today">Usado hoje: %1$s</string>
+    <string name="reset_today">Zerar o tempo de hoje</string>
+    <string name="override_button">Liberar por 15 minutos</string>
+    <string name="override_active">Liberado por mais %1$d min (limites pausados)</string>
+    <string name="schedule_hint">Fora do horário ou com o tempo esgotado, a tela é bloqueada e os apps somem da tela inicial. Use "Liberar por 15 minutos" para mexer no aparelho sem ser interrompido.\n\nO limite usa o relógio do aparelho e conta o tempo de tela ligada e desbloqueada.</string>
+
+    <string name="blocked_outside_window">Agora é hora de descansar 😴\n\nVocê pode usar das %1$s às %2$s.</string>
+    <string name="blocked_budget_spent">O tempo de hoje acabou 😴\n\nVocê já usou os %1$d minutos de hoje.</string>
+
     <string name="setup_hint">Digite o código acima no painel do responsável em até 15 minutos. Ele serve uma única vez e só funciona para o primeiro responsável; os demais entram por convite gerado no painel.\n\nPara reiniciar o aparelho e forçar o GPS, o app precisa ser instalado como Device Owner via ADB (veja docs/PROVISIONAMENTO.md).</string>
 </resources>

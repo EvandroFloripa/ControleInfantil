@@ -45,6 +45,13 @@
             android:text="@string/choose_apps"
             android:layout_marginTop="12dp" />
 
+        <Button
+            android:id="@+id/btnSchedule"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/schedule_button"
+            android:layout_marginTop="8dp" />
+
         <TextView
             android:id="@+id/allowedSummary"
             android:layout_width="match_parent"

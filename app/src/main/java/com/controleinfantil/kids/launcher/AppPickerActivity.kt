@@ -8,7 +8,7 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
+import com.controleinfantil.kids.setup.GuardianActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -23,7 +23,7 @@ import kotlinx.coroutines.withContext
  * A escolha só é gravada ao tocar em "Salvar", para que sair sem querer não mude
  * nada. Ao salvar, a lista do Lock Task é reaplicada (ver [KioskManager]).
  */
-class AppPickerActivity : AppCompatActivity() {
+class AppPickerActivity : GuardianActivity() {
 
     private lateinit var kiosk: KioskManager
     private val selected = mutableSetOf<String>()

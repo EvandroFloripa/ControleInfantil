@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.controleinfantil.kids.R
 import com.controleinfantil.kids.admin.DeviceAdmin
@@ -14,6 +13,7 @@ import com.controleinfantil.kids.launcher.AppPickerActivity
 import com.controleinfantil.kids.launcher.KioskManager
 import com.controleinfantil.kids.remote.DeviceIdentity
 import com.controleinfantil.kids.remote.SupabaseClient
+import com.controleinfantil.kids.schedule.ScheduleActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -22,7 +22,7 @@ import kotlinx.coroutines.withContext
  * Tela do responsável: estado da proteção, registro do aparelho e o código para
  * parear o PRIMEIRO controlador. Os demais entram por convite gerado no painel.
  */
-class SetupActivity : AppCompatActivity() {
+class SetupActivity : GuardianActivity() {
 
     private lateinit var policy: PolicyManager
     private lateinit var client: SupabaseClient
@@ -37,6 +37,9 @@ class SetupActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnPairingCode).setOnClickListener { generatePairingCode() }
         findViewById<Button>(R.id.btnChooseApps).setOnClickListener {
             startActivity(Intent(this, AppPickerActivity::class.java))
+        }
+        findViewById<Button>(R.id.btnSchedule).setOnClickListener {
+            startActivity(Intent(this, ScheduleActivity::class.java))
         }
 
         refreshStatus()
