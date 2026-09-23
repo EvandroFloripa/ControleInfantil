@@ -45,7 +45,11 @@ class ScreenCaptureActivity : AppCompatActivity() {
             finish()
             return
         }
-        consent.launch(projectionManager.createScreenCaptureIntent())
+        // Recriada (ex.: girou a tela com o diálogo aberto): o pedido original segue
+        // pendente e o resultado chega pelo mesmo `consent`; não abre um segundo.
+        if (savedInstanceState == null) {
+            consent.launch(projectionManager.createScreenCaptureIntent())
+        }
     }
 
     companion object {

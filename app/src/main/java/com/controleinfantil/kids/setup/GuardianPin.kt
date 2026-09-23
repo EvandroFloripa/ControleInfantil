@@ -57,11 +57,19 @@ object GuardianPin {
      * e abrir outra (ou girar o aparelho) para ganhar tentativas novas.
      */
     fun lockoutRemainingMs(context: Context): Long {
-        val until = prefs(context).getLong(KEY_LOCKED_UNTIL, 0L)
-        val remaining = until - System.currentTimeMillis()
-        // Se o relógio for atrasado, a trava não passa do prazo máximo. Adiantar o
-        // relógio encurta a trava, mas no quiosque a criança não abre as Configurações.
-        return remaining.coerceIn(0L, MAX_LOCKOUT_MS)
+        val p = prefs(context)
+        val now = System.currentTimeMillis()
+        val remaining = p.getLong(KEY_LOCKED_UNTIL, 0L) - now
+        if (remaining > MAX_LOCKOUT_MS) {
+            // O relógio voltou para trás depois da trava (ex.: estava adiantado e a
+            // hora da rede corrigiu). Regrava o prazo; só limitar o valor devolvido
+            // manteria a trava até a hora antiga, que pode estar dias à frente.
+            p.edit().putLong(KEY_LOCKED_UNTIL, now + MAX_LOCKOUT_MS).apply()
+            return MAX_LOCKOUT_MS
+        }
+        // Adiantar o relógio encurta a trava, mas no quiosque a criança não abre as
+        // Configurações.
+        return remaining.coerceAtLeast(0L)
     }
 
     /**

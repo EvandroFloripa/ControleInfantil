@@ -33,6 +33,36 @@ create table if not exists public.signals (
 create index if not exists signals_session_idx
     on public.signals (session_id, from_role, id);
 
+-- Um SDP de vídeo+áudio tem poucos KB; 32 KB sobra e impede encher a tabela com
+-- payloads enormes.
+alter table public.signals drop constraint if exists signals_payload_size;
+alter table public.signals add constraint signals_payload_size
+    check (pg_column_size(payload) <= 32768);
+
+-- Antes de gravar: a data é sempre a do servidor (senão um controlador poderia gravar
+-- datas no futuro, que a limpeza de 1 hora nunca apagaria) e há um teto de sinais
+-- por aparelho e por lado, contra quem tente inundar a tabela com um token válido.
+create or replace function private.guard_signal()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+    new.created_at := now();
+    if (select count(*) from public.signals s
+        where s.device_id = new.device_id
+          and s.from_role = new.from_role
+          and s.created_at > now() - interval '1 minute') >= 300 then
+        raise exception 'rate_limited' using errcode = '54000';
+    end if;
+    return new;
+end $$;
+
+drop trigger if exists guard_signal_trg on public.signals;
+create trigger guard_signal_trg
+    before insert on public.signals
+    for each row execute function private.guard_signal();
+
+create index if not exists signals_device_recent_idx
+    on public.signals (device_id, from_role, created_at);
+
 -- Limpa sinais antigos ao inserir um novo (evita a tabela crescer sem fim).
 create or replace function private.prune_signals()
 returns trigger language plpgsql security definer set search_path = '' as $$

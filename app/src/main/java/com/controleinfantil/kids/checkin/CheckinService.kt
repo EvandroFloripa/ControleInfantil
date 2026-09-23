@@ -25,11 +25,15 @@ import com.controleinfantil.kids.remote.DeviceIdentity
  *
  * A captura e o envio ficam por conta do [MediaTransport] (WebRTC, a implementar).
  * Enquanto ele é o placeholder, este serviço já faz toda a parte visível: sobe em
- * primeiro plano, mostra a notificação e encerra sob comando ou timeout.
+ * primeiro plano, mostra a notificação e encerra sob comando ou timeout (os prazos
+ * ficam no [com.controleinfantil.kids.media.WebRtcTransport]).
  */
 class CheckinService : Service() {
 
     private lateinit var transport: MediaTransport
+
+    /** A notificação subiu. Sem ela, a câmera e o microfone nunca são ligados. */
+    private var inForeground = false
 
     override fun onCreate() {
         super.onCreate()
@@ -37,7 +41,7 @@ class CheckinService : Service() {
         // onClosed encerra o serviço quando a conexão termina (ex.: "bye" do painel),
         // para a notificação não ficar dizendo "em uso" depois que parou.
         transport = MediaTransport.create(this) { stopSelf() }
-        startAsForeground()
+        inForeground = startAsForeground()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -45,6 +49,9 @@ class CheckinService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        // stopSelf() não interrompe na hora: sem este retorno, o transporte ligaria
+        // câmera e microfone mesmo com a notificação tendo falhado.
+        if (!inForeground) return START_NOT_STICKY
         val sessionId = intent?.getStringExtra(EXTRA_SESSION)
         if (sessionId.isNullOrEmpty()) {
             Log.e(TAG, "Check-in sem session_id; encerrando")
@@ -62,7 +69,8 @@ class CheckinService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun startAsForeground() {
+    /** Mostra a notificação persistente. Devolve false se não conseguiu. */
+    private fun startAsForeground(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
@@ -93,9 +101,11 @@ class CheckinService : Service() {
             } else {
                 startForeground(NOTIF_ID, notification)
             }
+            return true
         } catch (e: Exception) {
             Log.e(TAG, "Não foi possível iniciar o check-in (permissões de câmera/mic?)", e)
             stopSelf()
+            return false
         }
     }
 

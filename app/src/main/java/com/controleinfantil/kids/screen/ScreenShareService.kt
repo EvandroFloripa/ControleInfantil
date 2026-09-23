@@ -39,7 +39,8 @@ class ScreenShareService : Service() {
             return START_NOT_STICKY
         }
         // Em primeiro plano ANTES de o WebRTC criar a projeção (exigência do Android 14).
-        startAsForeground()
+        // Se a notificação falhar, não captura: stopSelf() não interrompe na hora.
+        if (!startAsForeground()) return START_NOT_STICKY
 
         val resultCode = intent?.getIntExtra(EXTRA_CODE, 0) ?: 0
         val data = intent?.let {
@@ -68,7 +69,8 @@ class ScreenShareService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun startAsForeground() {
+    /** Mostra a notificação persistente. Devolve false se não conseguiu. */
+    private fun startAsForeground(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
@@ -95,9 +97,11 @@ class ScreenShareService : Service() {
             } else {
                 startForeground(NOTIF_ID, notification)
             }
+            return true
         } catch (e: Exception) {
             Log.e(TAG, "Não foi possível iniciar o compartilhamento de tela", e)
             stopSelf()
+            return false
         }
     }
 
