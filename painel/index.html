@@ -74,6 +74,16 @@
   .hidden { display: none; }
   /* display:flex fica aqui, e não no style do elemento: lá venceria o .hidden. */
   #viewerModal:not(.hidden) { display: flex; }
+  .app-cat { font-weight:600; color:#00695C; margin:14px 0 4px; font-size:13px;
+             text-transform:uppercase; letter-spacing:.03em; }
+  .app-row { display:flex; justify-content:space-between; align-items:center;
+             padding:8px 4px; border-bottom:1px solid #f0f0f0; cursor:pointer; }
+  .app-row span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .apps-scroll { max-height:340px; overflow-y:auto; margin-top:4px;
+                 border:1px solid #eee; border-radius:8px; padding:0 10px; }
+  .apps-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .apps-toolbar input[type=search] { flex:1; min-width:160px; padding:9px 12px;
+             border:1px solid #ccc; border-radius:8px; }
 </style>
 </head>
 <body>
@@ -136,11 +146,12 @@
   <!-- 4b. Aplicativos -->
   <div class="card hidden" id="appsCard">
     <h2>Aplicativos</h2>
-    <div class="row" style="gap:8px;margin-bottom:8px">
-      <button class="secondary" id="btnLoadApps">Atualizar lista</button>
-      <span class="muted" id="appsHint"></span>
+    <div class="apps-toolbar">
+      <input type="search" id="appsSearch" placeholder="Buscar app…">
+      <button class="secondary" id="btnLoadApps">Atualizar</button>
     </div>
-    <div id="appsList" class="muted">—</div>
+    <div class="muted" id="appsCount" style="margin-top:8px"></div>
+    <div id="appsList" class="apps-scroll muted">—</div>
     <div style="margin-top:12px">
       <button id="btnSaveApps">Salvar apps liberados</button>
     </div>
@@ -497,7 +508,7 @@ function selectDevice(d) {
     .forEach(c => $(c).classList.remove('hidden'));
   document.querySelectorAll('[data-cmd]').forEach(b => { b.disabled = !isGuardian; });
   ['btnLoadApps', 'btnSaveApps', 'btnInstallApp', 'installInput',
-   'timeEnabled', 'timeStart', 'timeEnd', 'timeLimit', 'btnSaveTime']
+   'timeEnabled', 'timeStart', 'timeEnd', 'timeLimit', 'btnSaveTime', 'appsSearch']
     .forEach(id => { $(id).disabled = !isGuardian; });
   $('viewerNote').textContent = isGuardian
     ? '' : 'Você é observador neste aparelho: pode ver, mas não enviar comandos.';
@@ -508,7 +519,7 @@ function selectDevice(d) {
   loadHistory();
   loadPeople();
   loadApps();
-  loadStatus();
+  loadStatus(true);
 }
 
 $('btnRefresh').onclick = loadDevices;
@@ -554,40 +565,71 @@ async function sendCommand(type) {
 
 // --- 4b. Aplicativos ------------------------------------------------------
 let deviceApps = [];
+let allowedSet = new Set();
+const CAT_LABELS = {
+  game: 'Jogos', video: 'Vídeo', audio: 'Áudio', image: 'Imagens', social: 'Social',
+  news: 'Notícias', maps: 'Mapas', productivity: 'Produtividade', other: 'Outros'
+};
+const CAT_ORDER = ['game', 'video', 'audio', 'image', 'social', 'news', 'maps', 'productivity', 'other'];
 
 async function loadApps() {
   if (!state.selected) return;
   try {
-    deviceApps = await select(
-      `device_apps?device_id=eq.${state.selected}&order=label.asc&select=package,label,allowed`);
+    deviceApps = await select(`device_apps?device_id=eq.${state.selected}` +
+      `&order=label.asc&select=package,label,allowed,category`);
+    allowedSet = new Set(deviceApps.filter(a => a.allowed).map(a => a.package));
     renderApps();
   } catch (e) { toast(e.message); }
+}
+
+function updateAppsCount() {
+  $('appsCount').textContent = deviceApps.length
+    ? `${allowedSet.size} liberados de ${deviceApps.length}` : '';
 }
 
 function renderApps() {
   const box = $('appsList');
   if (!deviceApps.length) {
+    box.classList.add('muted');
     box.textContent = 'O celular ainda não enviou a lista de apps. Abra o Controle ' +
-      'Infantil na criança e aguarde alguns segundos, depois toque em "Atualizar lista".';
+      'Infantil na criança e aguarde alguns segundos, depois toque em "Atualizar".';
+    updateAppsCount();
     return;
   }
-  box.innerHTML = deviceApps.map((a, i) =>
-    `<label class="row" style="justify-content:space-between;padding:6px 0;cursor:pointer">
-       <span>${esc(a.label)}</span>
-       <input type="checkbox" data-app="${i}" ${a.allowed ? 'checked' : ''}>
-     </label>`).join('');
+  box.classList.remove('muted');
+  const q = ($('appsSearch').value || '').trim().toLowerCase();
+  const filtered = deviceApps.filter(a =>
+    !q || a.label.toLowerCase().includes(q) || a.package.toLowerCase().includes(q));
+
+  const groups = {};
+  filtered.forEach(a => { (groups[a.category || 'other'] = groups[a.category || 'other'] || []).push(a); });
+  const cats = Object.keys(groups).sort((x, y) => CAT_ORDER.indexOf(x) - CAT_ORDER.indexOf(y));
+
+  box.innerHTML = cats.length ? cats.map(cat => {
+    const rows = groups[cat].map(a =>
+      `<label class="app-row"><span>${esc(a.label)}</span>
+         <input type="checkbox" data-pkg="${esc(a.package)}" ${allowedSet.has(a.package) ? 'checked' : ''}></label>`
+    ).join('');
+    return `<div class="app-cat">${CAT_LABELS[cat] || cat} <span class="muted">(${groups[cat].length})</span></div>${rows}`;
+  }).join('') : '<p class="muted" style="padding:12px 0">Nenhum app encontrado.</p>';
+
+  box.querySelectorAll('[data-pkg]').forEach(cb => {
+    cb.onchange = () => {
+      const pkg = cb.getAttribute('data-pkg');
+      if (cb.checked) allowedSet.add(pkg); else allowedSet.delete(pkg);
+      updateAppsCount();
+    };
+  });
+  updateAppsCount();
 }
 
 $('btnLoadApps').onclick = loadApps;
+$('appsSearch').oninput = renderApps;
 
 $('btnSaveApps').onclick = async () => {
-  const packages = [];
-  document.querySelectorAll('#appsList [data-app]').forEach(b => {
-    if (b.checked) packages.push(deviceApps[+b.getAttribute('data-app')].package);
-  });
   try {
     await rpc('controller_send_command', {
-      p_device: state.selected, p_type: 'set_allowed_apps', p_payload: { packages },
+      p_device: state.selected, p_type: 'set_allowed_apps', p_payload: { packages: [...allowedSet] },
     });
     toast('Lista enviada ✅ o celular aplica em alguns segundos');
     setTimeout(loadApps, 4000);
@@ -612,14 +654,31 @@ $('btnInstallApp').onclick = async () => {
 // --- Tempo de uso --------------------------------------------------------
 let deviceStatus = null;
 
-async function loadStatus() {
+async function loadStatus(resetForm) {
   if (!state.selected) return;
   try {
     const rows = await select(`device_status?device_id=eq.${state.selected}` +
       `&select=time_enabled,start_minute,end_minute,daily_limit_minutes,used_minutes_today`);
     deviceStatus = rows[0] || null;
-    renderStatus();
+    // Se o celular já reportou, mostra o que ele tem. Se não, só preenche os padrões
+    // na primeira vez (ao trocar de aparelho) — nunca apaga o que o pai acabou de
+    // digitar/salvar enquanto o celular ainda não confirmou.
+    if (deviceStatus) {
+      renderStatus();
+    } else {
+      $('timeUsed').textContent =
+        'O celular ainda não aplicou/enviou o status. Verifique se o app está instalado ' +
+        'e pareado; deve aparecer em alguns segundos.';
+      if (resetForm) applyTimeDefaults();
+    }
   } catch (e) { toast(e.message); }
+}
+
+function applyTimeDefaults() {
+  $('timeEnabled').checked = false;
+  $('timeStart').value = '08:00';
+  $('timeEnd').value = '20:00';
+  $('timeLimit').value = '0';
 }
 
 function minToTime(m) {
@@ -631,15 +690,13 @@ function timeToMin(t) {
 }
 
 function renderStatus() {
-  const s = deviceStatus ||
-    { time_enabled: false, start_minute: 480, end_minute: 1200, daily_limit_minutes: 0, used_minutes_today: 0 };
+  const s = deviceStatus;
+  if (!s) return;
   $('timeEnabled').checked = s.time_enabled;
   $('timeStart').value = minToTime(s.start_minute);
   $('timeEnd').value = minToTime(s.end_minute);
   $('timeLimit').value = String(s.daily_limit_minutes);
-  $('timeUsed').textContent = deviceStatus
-    ? `Usado hoje: ${s.used_minutes_today} min`
-    : 'O celular ainda não enviou o status. Abra o app na criança e aguarde.';
+  $('timeUsed').textContent = `Usado hoje: ${s.used_minutes_today} min`;
 }
 
 $('btnSaveTime').onclick = async () => {
@@ -652,9 +709,11 @@ $('btnSaveTime').onclick = async () => {
         limit: parseInt($('timeLimit').value, 10) || 0,
       },
     });
-    toast('Limites enviados ✅ o celular aplica em alguns segundos');
-    setTimeout(loadStatus, 4000);
-  } catch (e) { toast(e.message); }
+    $('timeUsed').textContent = 'Enviado ✅ aguardando o celular aplicar…';
+    // Não recarrega o formulário logo em seguida — deixa o valor salvo à mostra até
+    // o celular confirmar (o refresh só troca se o celular já reportou).
+    setTimeout(() => loadStatus(false), 6000);
+  } catch (e) { toast('Não foi possível enviar: ' + e.message); }
 };
 
 // --- 5. Localização -------------------------------------------------------

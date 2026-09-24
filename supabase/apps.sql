@@ -24,9 +24,13 @@ create table if not exists public.device_apps (
     package    text not null,
     label      text not null,
     allowed    boolean not null default false,
+    category   text not null default 'other',
     updated_at timestamptz not null default now(),
     primary key (device_id, package)
 );
+
+-- Coluna acrescentada depois: garante em bancos que já rodaram uma versão anterior.
+alter table public.device_apps add column if not exists category text not null default 'other';
 
 -- ---------------------------------------------------------------------------
 --  Lado do APARELHO: reporta os apps abríveis e se cada um está liberado.
@@ -45,15 +49,17 @@ begin
 
     -- Substitui a lista por inteiro: some o que foi desinstalado.
     delete from public.device_apps where device_id = p_device;
-    insert into public.device_apps (device_id, package, label, allowed)
+    insert into public.device_apps (device_id, package, label, allowed, category)
     select p_device,
            left(e ->> 'package', 255),
            left(coalesce(nullif(e ->> 'label', ''), e ->> 'package'), 255),
-           coalesce((e ->> 'allowed')::boolean, false)
+           coalesce((e ->> 'allowed')::boolean, false),
+           left(coalesce(nullif(e ->> 'category', ''), 'other'), 32)
     from jsonb_array_elements(p_apps) e
     where e ->> 'package' is not null
     on conflict (device_id, package) do update
-        set label = excluded.label, allowed = excluded.allowed, updated_at = now();
+        set label = excluded.label, allowed = excluded.allowed,
+            category = excluded.category, updated_at = now();
 end $$;
 
 revoke execute on function public.device_report_apps(uuid, text, jsonb)

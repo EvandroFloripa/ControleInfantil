@@ -200,12 +200,26 @@ class SupabaseClient(context: Context) {
         }
     }
 
+    /** Um app reportado ao painel: pacote, nome, categoria e se está liberado. */
+    data class ReportedApp(
+        val packageName: String,
+        val label: String,
+        val category: String,
+        val allowed: Boolean,
+    )
+
     /** Reporta ao backend os apps abríveis do aparelho e se cada um está liberado. */
-    fun reportApps(apps: List<Triple<String, String, Boolean>>): Boolean {
+    fun reportApps(apps: List<ReportedApp>): Boolean {
         if (!DeviceIdentity.isRegistered(appContext)) return false
         val arr = JSONArray()
-        apps.forEach { (pkg, label, allowed) ->
-            arr.put(JSONObject().put("package", pkg).put("label", label).put("allowed", allowed))
+        apps.forEach {
+            arr.put(
+                JSONObject()
+                    .put("package", it.packageName)
+                    .put("label", it.label)
+                    .put("category", it.category)
+                    .put("allowed", it.allowed)
+            )
         }
         return deviceRpc("device_report_apps") { put("p_apps", arr) }.ok
     }

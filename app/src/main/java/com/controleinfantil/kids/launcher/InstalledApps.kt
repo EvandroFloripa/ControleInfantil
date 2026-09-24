@@ -36,11 +36,14 @@ fun Context.launchableApps(): List<AppInfo> {
         .sortedBy { it.label.lowercase() }
 }
 
+/** Um app abrível, sem ícone, com a categoria — para reportar ao painel. */
+data class AppEntry(val packageName: String, val label: String, val category: String)
+
 /**
- * Só pacote + nome dos apps abríveis, sem carregar ícones — leve o bastante para
- * reportar a lista ao painel a cada ciclo, sem o custo de [launchableApps].
+ * Pacote, nome e categoria dos apps abríveis, sem carregar ícones — leve o bastante
+ * para reportar a lista ao painel a cada ciclo, sem o custo de [launchableApps].
  */
-fun Context.launchablePackages(): List<Pair<String, String>> {
+fun Context.launchablePackages(): List<AppEntry> {
     val intent = Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER)
     return packageManager.queryIntentActivities(intent, 0)
         .map { it.activityInfo.packageName }
@@ -49,8 +52,25 @@ fun Context.launchablePackages(): List<Pair<String, String>> {
         .mapNotNull { pkg ->
             runCatching {
                 val info = packageManager.getApplicationInfo(pkg, 0)
-                pkg to packageManager.getApplicationLabel(info).toString()
+                AppEntry(
+                    packageName = pkg,
+                    label = packageManager.getApplicationLabel(info).toString(),
+                    category = categoryKey(info.category),
+                )
             }.getOrNull()
         }
-        .sortedBy { it.second.lowercase() }
+        .sortedBy { it.label.lowercase() }
+}
+
+/** Categoria do Android para uma chave estável (o painel traduz para o rótulo). */
+private fun categoryKey(category: Int): String = when (category) {
+    android.content.pm.ApplicationInfo.CATEGORY_GAME -> "game"
+    android.content.pm.ApplicationInfo.CATEGORY_AUDIO -> "audio"
+    android.content.pm.ApplicationInfo.CATEGORY_VIDEO -> "video"
+    android.content.pm.ApplicationInfo.CATEGORY_IMAGE -> "image"
+    android.content.pm.ApplicationInfo.CATEGORY_SOCIAL -> "social"
+    android.content.pm.ApplicationInfo.CATEGORY_NEWS -> "news"
+    android.content.pm.ApplicationInfo.CATEGORY_MAPS -> "maps"
+    android.content.pm.ApplicationInfo.CATEGORY_PRODUCTIVITY -> "productivity"
+    else -> "other"
 }

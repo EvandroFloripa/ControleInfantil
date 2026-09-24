@@ -167,8 +167,10 @@ class CommandService : Service() {
      */
     private fun syncApps() {
         val allowed = KioskManager(this).allowedPackages
-        val apps = launchablePackages().map { (pkg, label) -> Triple(pkg, label, pkg in allowed) }
-        val sig = apps.joinToString("|") { "${it.first}=${it.third}" }.hashCode().toString()
+        val apps = launchablePackages().map {
+            SupabaseClient.ReportedApp(it.packageName, it.label, it.category, it.packageName in allowed)
+        }
+        val sig = apps.joinToString("|") { "${it.packageName}=${it.allowed}" }.hashCode().toString()
         if (sig == lastAppsSig) return
         if (client.reportApps(apps)) lastAppsSig = sig
     }
