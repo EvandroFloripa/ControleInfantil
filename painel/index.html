@@ -315,8 +315,18 @@ function traduzErro(msg) {
 }
 
 // --- 1. Configuração ------------------------------------------------------
+/**
+ * Aceita o link do dashboard (supabase.com/dashboard/project/<ref>) — engano comum —
+ * e converte para a URL da API do projeto (https://<ref>.supabase.co).
+ */
+function normalizeSupabaseUrl(raw) {
+  const url = (raw || '').trim().replace(/\/+$/, '');
+  const m = url.match(/supabase\.com\/dashboard\/project\/([a-z0-9]+)/i);
+  return m ? `https://${m[1].toLowerCase()}.supabase.co` : url;
+}
+
 function loadCfg() {
-  state.url = (localStorage.getItem('ci_url') || '').replace(/\/$/, '');
+  state.url = normalizeSupabaseUrl(localStorage.getItem('ci_url'));
   state.key = localStorage.getItem('ci_key') || '';
   state.token = sessionStorage.getItem('ci_token');
   state.userId = sessionStorage.getItem('ci_uid');
@@ -330,9 +340,13 @@ function loadCfg() {
 }
 
 $('btnSaveCfg').onclick = () => {
-  state.url = $('cfgUrl').value.trim().replace(/\/$/, '');
+  state.url = normalizeSupabaseUrl($('cfgUrl').value);
   state.key = $('cfgKey').value.trim();
   if (!state.url || !state.key) return toast('Preencha URL e chave');
+  if (state.url !== $('cfgUrl').value.trim().replace(/\/+$/, '')) {
+    $('cfgUrl').value = state.url;
+    toast('Era o link do dashboard; usei a URL da API do projeto.');
+  }
   localStorage.setItem('ci_url', state.url);
   localStorage.setItem('ci_key', state.key);
   $('cfgStatus').textContent = '✅ salvo';

@@ -84,6 +84,18 @@ jobs:
           [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ] ||
             { echo "::error::Tag sem SUPABASE_URL/SUPABASE_ANON_KEY."; exit 1; }
 
+      - name: Conferir a URL do Supabase
+        if: env.SUPABASE_URL != ''
+        run: |
+          # Tem que ser a URL da API (https://<ref>.supabase.co), não o link do
+          # dashboard: com ela o app não conseguiria falar com o backend.
+          if printf '%s' "$SUPABASE_URL" | grep -q 'supabase.com/dashboard'; then
+            echo "::error::SUPABASE_URL é o link do dashboard. Use https://<ref>.supabase.co"
+            exit 1
+          fi
+          printf '%s' "$SUPABASE_URL" | grep -Eq '^https://[^/]+$' ||
+            { echo "::error::SUPABASE_URL deve ser só https://host, sem caminho."; exit 1; }
+
       - name: Aviso de Supabase não configurado
         if: env.IS_TAG != 'true' && (env.SUPABASE_URL == '' || env.SUPABASE_ANON_KEY == '')
         run: echo "::warning::SUPABASE_URL/SUPABASE_ANON_KEY ausentes; o APK sai com placeholders."
