@@ -63,7 +63,18 @@ jobs:
 
       - name: Conferir o site
         run: |
-          # O painel precisa responder e manter o bloqueio contra ser embutido.
-          curl -fsS https://painelpais.ea-systems.dev.br/ | grep -q "Controle Infantil"
-          curl -fsSI https://painelpais.ea-systems.dev.br/ | grep -qi "x-frame-options: DENY"
-          echo "Painel no ar."
+          # O site tem de servir exatamente o index.html deste commit: se a conta
+          # FTP apontar para outra pasta, o envio "dá certo" mas nada muda no site.
+          site=https://painelpais.ea-systems.dev.br
+          for i in 1 2 3 4 5 6; do
+            live=$(curl -fsS "$site/index.html?v=$GITHUB_SHA-$i" | sha256sum | cut -d' ' -f1)
+            [ "$live" = "$(sha256sum painel/index.html | cut -d' ' -f1)" ] && break
+            sleep 10
+          done
+          if [ "$live" != "$(sha256sum painel/index.html | cut -d' ' -f1)" ]; then
+            echo "::error::O site não serve o index.html deste commit. A conta FTP deve estar apontando para outra pasta que não public_html/painelpais do ea-systems.dev.br."
+            exit 1
+          fi
+          # E mantém o bloqueio contra ser embutido em outro site.
+          curl -fsSI "$site/" | grep -qi "x-frame-options: DENY"
+          echo "Painel no ar com a versão deste commit."
