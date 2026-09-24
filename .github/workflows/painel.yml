@@ -1,0 +1,59 @@
+# Publica o painel dos pais em https://painelpais.ea-systems.dev.br (Hostinger).
+#
+# Roda quando algo em painel/ muda na branch principal, ou à mão (Actions → Run).
+# Envia por FTPS só os arquivos que mudaram (o estado fica no servidor, em
+# .ftp-deploy-sync-state.json).
+#
+# Secrets (Settings -> Secrets and variables -> Actions):
+#   FTP_SERVER    host do FTP da Hostinger (hPanel -> Contas FTP)
+#   FTP_USERNAME  conta FTP restrita a public_html/painelpais
+#   FTP_PASSWORD  senha dessa conta
+name: Painel
+
+on:
+  push:
+    branches: [claude/parental-control-app-5qy1gk]
+    paths: ['painel/**', '.github/workflows/painel.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: painel-deploy
+  cancel-in-progress: false   # não interrompe um envio no meio
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: painel
+      url: https://painelpais.ea-systems.dev.br
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Conferir secrets
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then
+            echo "::error::Faltam FTP_SERVER, FTP_USERNAME ou FTP_PASSWORD."
+            exit 1
+          fi
+
+      - name: Enviar para a Hostinger
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./painel/
+          # A conta FTP já começa em public_html/painelpais.
+          server-dir: ./
+
+      - name: Conferir o site
+        run: |
+          # O painel precisa responder e manter o bloqueio contra ser embutido.
+          curl -fsS https://painelpais.ea-systems.dev.br/ | grep -q "Controle Infantil"
+          curl -fsSI https://painelpais.ea-systems.dev.br/ | grep -qi "x-frame-options: DENY"
+          echo "Painel no ar."

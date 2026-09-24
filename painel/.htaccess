@@ -1,0 +1,21 @@
+# Cabeçalhos do painel dos pais (Apache/LiteSpeed da Hostinger).
+
+<IfModule mod_headers.c>
+    # O painel liga câmera e tela da criança: não pode ser embutido em outro site
+    # (clickjacking).
+    Header always set X-Frame-Options "DENY"
+    Header always set Content-Security-Policy "frame-ancestors 'none'"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "no-referrer"
+    # O painel só recebe mídia; não precisa de câmera, microfone nem localização aqui.
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Header always set Strict-Transport-Security "max-age=31536000"
+
+    # Sempre a versão mais nova do painel após um deploy.
+    <FilesMatch "\.html$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>
+
+Options -Indexes
+DirectoryIndex index.html
