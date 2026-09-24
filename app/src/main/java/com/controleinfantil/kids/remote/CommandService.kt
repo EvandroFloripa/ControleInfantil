@@ -18,6 +18,7 @@ import com.controleinfantil.kids.launcher.KioskManager
 import com.controleinfantil.kids.launcher.LauncherActivity
 import com.controleinfantil.kids.launcher.launchablePackages
 import com.controleinfantil.kids.lock.LockScreen
+import com.controleinfantil.kids.setup.GuardianPin
 import com.controleinfantil.kids.location.LocationReporter
 import com.controleinfantil.kids.screen.ScreenCaptureActivity
 import com.controleinfantil.kids.screen.ScreenShareService
@@ -87,6 +88,8 @@ class CommandService : Service() {
                 addDataScheme("package")
             },
         )
+        // Estava bloqueado quando o app foi morto/reiniciou: reaplica o bloqueio.
+        if (LockScreen.shouldRestore(this) && GuardianPin.isSet(this)) LockScreen.show(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -170,9 +173,10 @@ class CommandService : Service() {
         Log.i(TAG, "Executando comando ${cmd.type} (${cmd.id})")
         val result: String = when (cmd.type) {
             Command.Type.LOCK_SCREEN ->
-                // Bloqueio real por overlay (só sai com o PIN). Sem a permissão de
-                // sobreposição, ao menos apaga a tela pelo Device Admin.
-                if (LockScreen.show(this)) "done"
+                // Bloqueio real por overlay: só com PIN definido (senão não haveria
+                // como desbloquear) e com a permissão de sobreposição. Caso contrário,
+                // apaga a tela pelo Device Admin.
+                if (GuardianPin.isSet(this) && LockScreen.show(this)) "done"
                 else when (val r = asStatus(policy.lockNow())) {
                     "done" -> "locked_no_overlay"
                     else -> r

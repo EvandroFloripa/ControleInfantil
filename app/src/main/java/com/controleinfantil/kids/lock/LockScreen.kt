@@ -29,11 +29,25 @@ import com.controleinfantil.kids.setup.GuardianPin
 object LockScreen {
 
     private const val TAG = "LockScreen"
+    private const val PREFS = "lock"
+    private const val KEY_LOCKED = "locked"
     private var view: View? = null
 
     fun canShow(context: Context): Boolean = Settings.canDrawOverlays(context)
 
     val isShowing: Boolean get() = view != null
+
+    /**
+     * Ficou bloqueado? Persistido para o bloqueio sobreviver ao app ser morto (a
+     * criança fechar pelos Recentes): ao reiniciar, o serviço reaplica o bloqueio.
+     */
+    fun shouldRestore(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_LOCKED, false)
+
+    private fun setLocked(context: Context, locked: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_LOCKED, locked).apply()
+    }
 
     /** Mostra o bloqueio. Devolve false se falta a permissão de sobreposição. */
     fun show(context: Context): Boolean {
@@ -47,14 +61,24 @@ object LockScreen {
             val pin = v.findViewById<EditText>(R.id.lockPin)
             val error = v.findViewById<TextView>(R.id.lockError)
             v.findViewById<Button>(R.id.lockUnlock).setOnClickListener {
-                // Sem PIN configurado, qualquer entrada tira o bloqueio (não trava o
-                // aparelho para sempre); com PIN, exige o PIN certo.
-                val ok = !GuardianPin.isSet(app) || GuardianPin.verify(app, pin.text.toString())
-                if (ok) {
+                // Só o PIP do responsável tira o bloqueio, com o mesmo limite de
+                // tentativas da área do responsável (contagem gravada, trava crescente)
+                // para o PIN de 4 dígitos não poder ser tentado à vontade.
+                val remaining = GuardianPin.lockoutRemainingMs(app)
+                if (remaining > 0) {
+                    error.text = app.getString(R.string.pin_too_many, waitText(app, remaining))
+                    error.visibility = View.VISIBLE
+                    return@setOnClickListener
+                }
+                if (GuardianPin.verify(app, pin.text.toString())) {
+                    GuardianPin.clearFailures(app)
                     hide(app)
                 } else {
                     pin.text.clear()
-                    error.text = app.getString(R.string.pin_wrong)
+                    val lock = GuardianPin.registerFailure(app)
+                    error.text =
+                        if (lock > 0) app.getString(R.string.pin_too_many, waitText(app, lock))
+                        else app.getString(R.string.pin_wrong)
                     error.visibility = View.VISIBLE
                 }
             }
@@ -75,6 +99,7 @@ object LockScreen {
             try {
                 wm.addView(v, params)
                 view = v
+                setLocked(app, true)
             } catch (e: Exception) {
                 Log.e(TAG, "Falha ao mostrar o bloqueio", e)
             }
@@ -82,8 +107,15 @@ object LockScreen {
         return true
     }
 
+    private fun waitText(context: Context, ms: Long): String {
+        val seconds = (ms + 999) / 1000
+        return if (seconds < 60) context.getString(R.string.duration_seconds, seconds.toInt())
+        else context.getString(R.string.duration_minutes, ((seconds + 59) / 60).toInt())
+    }
+
     fun hide(context: Context) {
         val app = context.applicationContext
+        setLocked(app, false)
         Handler(Looper.getMainLooper()).post {
             val v = view ?: return@post
             val wm = app.getSystemService(Context.WINDOW_SERVICE) as WindowManager
