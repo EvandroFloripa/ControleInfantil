@@ -36,18 +36,26 @@ class AppBlockerService : AccessibilityService() {
         // O próprio app (launcher, setup, bloqueio) nunca é bloqueado.
         if (pkg == packageName) return false
         // Responsável autenticado (PIN há pouco): libera tudo, inclusive as
-        // Configurações — assim o pai acessa o sistema, mas a criança (sem PIN) não.
+        // Configurações e a instalação — o pai acessa o sistema, a criança não.
         if (GuardianArea.isUnlocked()) return false
+
+        // Instalar apps (Play e a tela "deseja instalar?") é sempre bloqueado, para a
+        // criança não instalar por um link/APK. Só libera na janela em que o PAI manda
+        // instalar pelo painel (InstallAllow) — aí a instalação dele conclui.
+        if (isInstaller(pkg)) return !InstallAllow.isPlayAllowed(this)
+
         // Essenciais do sistema: barra/diálogos e o discador (receber chamadas).
         if (pkg in essentials()) return false
-        // Janela curta liberada para instalar pela Play (ver InstallAllow).
-        if (InstallAllow.isPlayAllowed(this) && pkg == PLAY_PACKAGE) return false
 
         // Fora do horário permitido, só o nosso app (que mostra o aviso de descanso).
         if (checkRules(this).blocked) return true
         // No horário: bloqueia o que não está na lista de liberados.
         return pkg !in KioskManager(this).allowedPackages
     }
+
+    /** Play Store ou qualquer instalador de pacotes (inclusive variações das fabricantes). */
+    private fun isInstaller(pkg: String): Boolean =
+        pkg == PLAY_PACKAGE || pkg.contains("packageinstaller") || pkg == "com.android.packageinstaller"
 
     private fun goHome() {
         runCatching {
