@@ -39,6 +39,7 @@ data class Command(
         // Gestão remota de apps (painel)
         SET_ALLOWED_APPS("set_allowed_apps"),
         INSTALL_APP("install_app"),
+        SET_TIME_RULES("set_time_rules"),
         UNKNOWN("unknown");
 
         companion object {

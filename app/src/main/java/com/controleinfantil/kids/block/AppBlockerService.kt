@@ -10,6 +10,7 @@ import android.view.accessibility.AccessibilityEvent
 import com.controleinfantil.kids.launcher.KioskManager
 import com.controleinfantil.kids.launcher.LauncherActivity
 import com.controleinfantil.kids.schedule.checkRules
+import com.controleinfantil.kids.setup.GuardianArea
 
 /**
  * Bloqueia, sem Device Owner, os apps que não estão liberados: quando um app fora da
@@ -34,6 +35,9 @@ class AppBlockerService : AccessibilityService() {
     private fun shouldBlock(pkg: String): Boolean {
         // O próprio app (launcher, setup, bloqueio) nunca é bloqueado.
         if (pkg == packageName) return false
+        // Responsável autenticado (PIN há pouco): libera tudo, inclusive as
+        // Configurações — assim o pai acessa o sistema, mas a criança (sem PIN) não.
+        if (GuardianArea.isUnlocked()) return false
         // Essenciais do sistema: barra/diálogos e o discador (receber chamadas).
         if (pkg in essentials()) return false
         // Janela curta liberada para instalar pela Play (ver InstallAllow).

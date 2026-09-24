@@ -210,6 +210,12 @@ class SupabaseClient(context: Context) {
         return deviceRpc("device_report_apps") { put("p_apps", arr) }.ok
     }
 
+    /** Reporta ao painel as regras de tempo vigentes e o uso de hoje (em minutos). */
+    fun reportStatus(status: JSONObject): Boolean {
+        if (!DeviceIdentity.isRegistered(appContext)) return false
+        return deviceRpc("device_report_status") { put("p_status", status) }.ok
+    }
+
     fun postLocation(lat: Double, lon: Double, accuracy: Float) {
         if (!DeviceIdentity.isRegistered(appContext)) return
         deviceRpc("device_post_location") {

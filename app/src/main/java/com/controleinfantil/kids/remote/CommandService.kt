@@ -23,6 +23,7 @@ import com.controleinfantil.kids.setup.GuardianPin
 import com.controleinfantil.kids.location.LocationReporter
 import com.controleinfantil.kids.screen.ScreenCaptureActivity
 import com.controleinfantil.kids.screen.ScreenShareService
+import com.controleinfantil.kids.schedule.TimeRules
 import com.controleinfantil.kids.schedule.UsageTracker
 import com.controleinfantil.kids.schedule.checkRules
 import com.controleinfantil.kids.setup.GuardianArea
@@ -49,6 +50,7 @@ class CommandService : Service() {
     private lateinit var policy: PolicyManager
     private lateinit var location: LocationReporter
     private var lastAppsSig: String? = null
+    private var lastStatusSig: String? = null
 
     /**
      * Quando um app termina de instalar (ou é removido), volta para o launcher — assim
@@ -113,6 +115,7 @@ class CommandService : Service() {
                 if (client.ensureRegistered()) {
                     client.heartbeat()
                     syncApps()
+                    syncStatus()
                     client.fetchPendingCommands().forEach { execute(it) }
                 } else {
                     Log.w(TAG, "Aparelho ainda não registrado (verifique SupabaseConfig)")
@@ -170,6 +173,22 @@ class CommandService : Service() {
         if (client.reportApps(apps)) lastAppsSig = sig
     }
 
+    /** Reporta as regras de tempo e o uso de hoje ao painel, só quando muda. */
+    private fun syncStatus() {
+        val rules = TimeRules.load(this)
+        val used = UsageTracker.usedMinutesToday(this)
+        val sig = "${rules.enabled}|${rules.startMinute}|${rules.endMinute}|" +
+            "${rules.dailyLimitMinutes}|$used"
+        if (sig == lastStatusSig) return
+        val json = org.json.JSONObject()
+            .put("enabled", rules.enabled)
+            .put("start", rules.startMinute)
+            .put("end", rules.endMinute)
+            .put("limit", rules.dailyLimitMinutes)
+            .put("used", used)
+        if (client.reportStatus(json)) lastStatusSig = sig
+    }
+
     private suspend fun execute(cmd: Command) {
         Log.i(TAG, "Executando comando ${cmd.type} (${cmd.id})")
         val result: String = when (cmd.type) {
@@ -214,6 +233,20 @@ class CommandService : Service() {
                 "done"
             }
             Command.Type.INSTALL_APP -> openPlayStore(cmd.appPackage)
+            Command.Type.SET_TIME_RULES -> {
+                val p = cmd.payload
+                TimeRules.save(
+                    this,
+                    TimeRules(
+                        enabled = p.optBoolean("enabled"),
+                        startMinute = p.optInt("start", 8 * 60),
+                        endMinute = p.optInt("end", 20 * 60),
+                        dailyLimitMinutes = p.optInt("limit", 0),
+                    ),
+                )
+                lastStatusSig = null   // reflete no painel na próxima volta
+                "done"
+            }
             Command.Type.UNKNOWN -> "unsupported"
         }
         val detail = when (result) {
