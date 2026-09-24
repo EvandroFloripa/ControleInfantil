@@ -49,23 +49,58 @@ tela, e isso é proposital.
   tabela `commands` (dá para fazer pelo próprio Supabase). Um painel web é o
   próximo passo natural.
 
-## Comece por aqui
+## Checklist de configuração
 
-1. **Provisionamento (importante):** para os recursos fortes (reiniciar, ligar GPS,
-   quiosque completo) o app precisa ser **Device Owner**, o que exige instalar via
-   ADB em um aparelho recém-resetado. O passo a passo está em
-   [`docs/PROVISIONAMENTO.md`](docs/PROVISIONAMENTO.md).
-2. **Backend:** rode o [`supabase/schema.sql`](supabase/schema.sql) no seu projeto Supabase.
-3. **Configuração do app:** a URL e a chave anon do Supabase entram no build, fora
-   do código. Localmente, coloque no `local.properties` (não versionado):
-   ```properties
-   supabase.url=https://SEU-PROJETO.supabase.co
-   supabase.anonKey=SUA_ANON_KEY
-   ```
-4. **Build:** abra a pasta no Android Studio e rode no aparelho — ou baixe o APK
-   gerado pela CI (abaixo).
-5. **Painel:** abra `painel/index.html` no navegador, informe a mesma URL e chave,
-   crie sua conta e pareie (passo abaixo).
+Siga na ordem. O que é opcional está marcado.
+
+### 1. Backend (Supabase) — rode os SQL nesta ordem
+No projeto Supabase, em *SQL Editor*, rode um de cada vez. Todos podem ser
+rodados de novo sem problema.
+
+1. [`supabase/schema.sql`](supabase/schema.sql) — tabelas, RLS e funções.
+2. [`supabase/signaling.sql`](supabase/signaling.sql) — check-in de vídeo e ver a tela.
+3. [`supabase/apps.sql`](supabase/apps.sql) — gestão de apps pelo painel.
+4. [`supabase/timerules.sql`](supabase/timerules.sql) — limites de tempo pelo painel.
+   **Rode-o por último**: ele traz a lista completa de comandos.
+
+Depois, em *Authentication → URL Configuration*: **Site URL** =
+`https://painelpais.ea-systems.dev.br` e, em **Redirect URLs**, adicione
+`https://painelpais.ea-systems.dev.br/**` (para o e-mail de confirmação levar ao
+painel).
+
+### 2. Painel do responsável
+Já publicado em **https://painelpais.ea-systems.dev.br** (a URL e a chave anon do
+Supabase são públicas e já vêm embutidas — o pai não digita nada). Abra, crie a
+conta e confirme pelo e-mail.
+
+### 3. App no celular da criança
+1. Baixe o APK da [última Release](../../releases/latest) (ou compile — veja abaixo).
+2. Instale no celular. Abra o app.
+3. Abra a **Configuração do responsável**: toque e segure no relógio → crie o PIN.
+4. Conceda as permissões (o app mostra os botões quando faltam):
+   - **Ativar proteção (Device Admin)** — bloquear tela.
+   - **Permitir bloqueio de tela** (sobrepor a outros apps) — bloqueio real com PIN.
+   - **Ativar bloqueio de apps** (Acessibilidade) — impede abrir apps não liberados.
+   - Câmera, microfone e localização são pedidas automaticamente.
+5. **Escolher os apps liberados** e, se quiser, **Limites de horário** (também dá
+   para fazer os dois pelo painel).
+6. **Gerar código de pareamento** e usá-lo no painel (ver *Como parear*).
+
+### 4. Device Owner (opcional, controle máximo)
+Sem Device Owner o app já bloqueia apps, tela e horários (via Acessibilidade +
+sobreposição). Com **Device Owner** o controle fica inquebrável (quiosque real,
+sem desinstalar, sem desligar nas Configurações, instalação silenciosa). Exige
+resetar o aparelho e provisionar via ADB — passo a passo em
+[`docs/PROVISIONAMENTO.md`](docs/PROVISIONAMENTO.md).
+
+### Compilar o app localmente (opcional)
+A URL e a chave anon entram no build, fora do código. No `local.properties` (não
+versionado):
+```properties
+supabase.url=https://SEU-PROJETO.supabase.co
+supabase.anonKey=SUA_ANON_KEY
+```
+Depois abra no Android Studio e rode, ou use a CI (abaixo).
 
 ## CI e publicação do APK
 
