@@ -59,6 +59,11 @@
     <string name="pin_enter_title">Área do responsável</string>
     <string name="pin_enter_message">Digite o PIN para continuar.</string>
     <string name="pin_hint">PIN</string>
+    <string name="lock_title">Aparelho bloqueado</string>
+    <string name="lock_message">Peça ao responsável para desbloquear com o PIN.</string>
+    <string name="lock_unlock">Desbloquear</string>
+    <string name="overlay_button">Permitir bloqueio de tela</string>
+    <string name="overlay_needed">Para o "Bloquear tela" funcionar de verdade, permita sobrepor a outros apps.</string>
     <string name="pin_confirm_hint">Repita o PIN</string>
     <string name="pin_too_short">O PIN precisa ter pelo menos %1$d números.</string>
     <string name="pin_mismatch">Os dois PINs não são iguais.</string>

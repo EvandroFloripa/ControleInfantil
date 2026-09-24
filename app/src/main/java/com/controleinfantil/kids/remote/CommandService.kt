@@ -17,6 +17,7 @@ import com.controleinfantil.kids.checkin.CheckinService
 import com.controleinfantil.kids.launcher.KioskManager
 import com.controleinfantil.kids.launcher.LauncherActivity
 import com.controleinfantil.kids.launcher.launchablePackages
+import com.controleinfantil.kids.lock.LockScreen
 import com.controleinfantil.kids.location.LocationReporter
 import com.controleinfantil.kids.screen.ScreenCaptureActivity
 import com.controleinfantil.kids.screen.ScreenShareService
@@ -47,6 +48,25 @@ class CommandService : Service() {
     private lateinit var location: LocationReporter
     private var lastAppsSig: String? = null
 
+    /**
+     * Quando um app termina de instalar (ou é removido), volta para o launcher — assim
+     * a Play Store não fica aberta para a criança navegar depois de instalar — e
+     * reenvia a lista de apps ao painel.
+     */
+    private val packageChanges = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            lastAppsSig = null
+            if (intent.action == Intent.ACTION_PACKAGE_ADDED) {
+                runCatching {
+                    startActivity(
+                        Intent(this@CommandService, LauncherActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    )
+                }
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         client = SupabaseClient(this)
@@ -59,6 +79,14 @@ class CommandService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "startForeground falhou (permissão de localização pendente?)", e)
         }
+        registerReceiver(
+            packageChanges,
+            android.content.IntentFilter().apply {
+                addAction(Intent.ACTION_PACKAGE_ADDED)
+                addAction(Intent.ACTION_PACKAGE_REMOVED)
+                addDataScheme("package")
+            },
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -141,7 +169,14 @@ class CommandService : Service() {
     private suspend fun execute(cmd: Command) {
         Log.i(TAG, "Executando comando ${cmd.type} (${cmd.id})")
         val result: String = when (cmd.type) {
-            Command.Type.LOCK_SCREEN -> asStatus(policy.lockNow())
+            Command.Type.LOCK_SCREEN ->
+                // Bloqueio real por overlay (só sai com o PIN). Sem a permissão de
+                // sobreposição, ao menos apaga a tela pelo Device Admin.
+                if (LockScreen.show(this)) "done"
+                else when (val r = asStatus(policy.lockNow())) {
+                    "done" -> "locked_no_overlay"
+                    else -> r
+                }
             Command.Type.REBOOT -> asStatus(policy.reboot())
             Command.Type.ENABLE_LOCATION -> asStatus(policy.ensureLocationEnabled())
             Command.Type.REQUEST_LOCATION ->
@@ -181,9 +216,12 @@ class CommandService : Service() {
             "needs_owner" -> "Falta provisionar como Device Owner (ADB)"
             "unsupported" -> "Comando ainda não implementado nesta versão"
             "started" -> "Aguardando o consentimento de captura de tela no aparelho"
+            "locked_no_overlay" -> "Tela apagada. Para bloqueio total, permita \"sobrepor a outros apps\" na configuração."
             else -> null
         }
-        val status = if (result == "done" || result == "started") "done" else "error"
+        val status =
+            if (result == "done" || result == "started" || result == "locked_no_overlay") "done"
+            else "error"
         client.reportCommandResult(cmd.id, status, detail ?: result.takeIf { it != "done" })
     }
 
@@ -240,6 +278,7 @@ class CommandService : Service() {
     }
 
     override fun onDestroy() {
+        runCatching { unregisterReceiver(packageChanges) }
         scope.cancel()
         super.onDestroy()
     }

@@ -40,7 +40,6 @@ class SetupActivity : GuardianActivity() {
         client = SupabaseClient(this)
 
         findViewById<Button>(R.id.btnEnableAdmin).setOnClickListener { requestDeviceAdmin() }
-        ensureLocationPermission()
         findViewById<Button>(R.id.btnPairingCode).setOnClickListener { generatePairingCode() }
         findViewById<Button>(R.id.btnChooseApps).setOnClickListener {
             startActivity(Intent(this, AppPickerActivity::class.java))
@@ -49,6 +48,8 @@ class SetupActivity : GuardianActivity() {
             startActivity(Intent(this, ScheduleActivity::class.java))
         }
         findViewById<Button>(R.id.btnReleaseDevice).setOnClickListener { confirmReleaseDevice() }
+        findViewById<Button>(R.id.btnOverlay).setOnClickListener { requestOverlay() }
+        ensureRuntimePermissions()
 
         refreshStatus()
     }
@@ -85,6 +86,11 @@ class SetupActivity : GuardianActivity() {
             getString(R.string.status_fmt, admin, owner)
         findViewById<View>(R.id.btnReleaseDevice).visibility =
             if (policy.isDeviceOwner) View.VISIBLE else View.GONE
+        // Botão de sobreposição só quando falta a permissão (e não é Device Owner).
+        val overlayOk = policy.isDeviceOwner ||
+            android.provider.Settings.canDrawOverlays(this)
+        findViewById<View>(R.id.btnOverlay).visibility =
+            if (overlayOk) View.GONE else View.VISIBLE
 
         val id = DeviceIdentity.id(this)
         findViewById<TextView>(R.id.deviceId).text =
@@ -97,20 +103,34 @@ class SetupActivity : GuardianActivity() {
     }
 
     /**
-     * No aparelho provisionado o Device Owner já concede a localização sozinho. Fora
-     * dele (testes, ou antes de provisionar) pedimos em runtime — sem isso o "Pedir
-     * localização" nunca teria posição para enviar.
+     * No aparelho provisionado o Device Owner concede tudo sozinho. Fora dele (testes,
+     * ou antes de provisionar) pedimos em runtime: sem câmera/microfone o check-in
+     * fica preto; sem localização o "Pedir localização" não tem o que enviar.
      */
-    private fun ensureLocationPermission() {
+    private fun ensureRuntimePermissions() {
         if (policy.isDeviceOwner) return
-        val fine = android.Manifest.permission.ACCESS_FINE_LOCATION
-        val granted = ContextCompat.checkSelfPermission(this, fine) ==
-            PackageManager.PERMISSION_GRANTED
-        if (!granted) locationPermission.launch(fine)
+        val needed = listOf(
+            android.Manifest.permission.CAMERA,
+            android.Manifest.permission.RECORD_AUDIO,
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+        ).filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (needed.isNotEmpty()) runtimePermissions.launch(needed.toTypedArray())
     }
 
-    private val locationPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    private val runtimePermissions =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
+
+    /** Abre a tela do sistema para permitir sobrepor a outros apps (bloqueio real). */
+    private fun requestOverlay() {
+        startActivity(
+            Intent(
+                android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                android.net.Uri.parse("package:$packageName"),
+            )
+        )
+    }
 
     private fun requestDeviceAdmin() {
         if (policy.isAdminActive) return
