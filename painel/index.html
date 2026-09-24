@@ -158,7 +158,7 @@
     <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
     <h3 style="margin:0 0 8px;font-size:15px">Instalar um app</h3>
     <div class="row" style="gap:8px">
-      <input id="installInput" placeholder="ID do pacote, link da Play, ou link .apk"
+      <input id="installInput" placeholder="ID do pacote, link da Play, ou link .apk (https)"
              style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px">
       <button class="secondary" id="btnInstallApp">Instalar</button>
     </div>
@@ -639,9 +639,11 @@ $('btnSaveApps').onclick = async () => {
 $('btnInstallApp').onclick = async () => {
   const raw = $('installInput').value.trim();
   let payload;
-  if (/^https?:\/\/.+\.apk(\?.*)?$/i.test(raw)) {
-    // Link de APK: instalação silenciosa (só funciona no celular Device Owner).
+  if (/^https:\/\/.+\.apk(\?.*)?$/i.test(raw)) {
+    // Link de APK por HTTPS: instalação silenciosa (só no celular Device Owner).
     payload = { apk_url: raw };
+  } else if (/^http:\/\//i.test(raw)) {
+    return toast('Use um link https:// para o APK (http não é aceito).');
   } else {
     // ID do pacote (com.exemplo.app) ou link da Play com ?id=... → abre a Play.
     const m = raw.match(/[?&]id=([\w.]+)/) || raw.match(/^([\w.]+(?:\.[\w.]+)+)$/);
