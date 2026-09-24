@@ -27,8 +27,8 @@ Com o Android Studio (ou o APK gerado) e o aparelho conectado por USB:
 # Compila e instala o app
 ./gradlew installDebug
 
-# ou instala um APK já pronto
-adb install app-debug.apk
+# ou instala o APK da última Release (recomendado)
+adb install ControleInfantil-0.1.7.apk
 ```
 
 ### 3. Torne o app Device Owner
@@ -41,7 +41,7 @@ Se aparecer `Success: Device owner set...`, deu certo. Se der erro dizendo que j
 existe conta no aparelho, refaça o passo 1.
 
 ### 4. Verifique
-Abra o app > área do responsável (toque longo no título "Meus aplicativos"). O status
+Abra o app > área do responsável (toque e segure no relógio, digite o PIN). O status
 deve mostrar:
 
 ```
@@ -55,8 +55,11 @@ Dá para usar só como **Device Admin**:
 - Abra o app, vá na área do responsável e toque em **"Ativar proteção (Device
   Admin)"**.
 - Funciona: **bloquear tela** e o **launcher** (lista de apps liberados).
-- Não funciona sem Device Owner: **reiniciar**, **forçar o GPS a ligar** e o
-  **quiosque travado** (a criança consegue sair do launcher com mais facilidade).
+- Com **Acessibilidade + sobreposição** ligadas (botões no setup), também funcionam
+  o **bloqueio de apps**, o **bloqueio de tela com PIN** e o bloqueio da instalação.
+- Só com Device Owner: **reiniciar**, **forçar o GPS**, **quiosque inquebrável**,
+  **impedir desinstalar/desligar o app** e **instalação silenciosa**. Sem ele, um
+  adulto ainda consegue desligar a Acessibilidade nas Configurações.
 
 ## Depois de instalar
 
