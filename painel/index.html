@@ -369,7 +369,11 @@ $('btnAuth').onclick = async () => {
   $('btnAuth').disabled = true;
   $('authMsg').textContent = 'Aguarde…';
   try {
-    const path = state.signupMode ? '/auth/v1/signup' : '/auth/v1/token?grant_type=password';
+    // No cadastro, pede que o link de confirmação volte para este painel (precisa
+    // estar em Authentication -> URL Configuration -> Redirect URLs no Supabase).
+    const path = state.signupMode
+      ? '/auth/v1/signup?redirect_to=' + encodeURIComponent(location.origin + location.pathname)
+      : '/auth/v1/token?grant_type=password';
     const resp = await fetch(state.url + path, {
       method: 'POST',
       headers: { 'apikey': state.key, 'Content-Type': 'application/json' },
@@ -734,6 +738,27 @@ function stopViewer(sendStop = true) {
 
 $('viewerClose').onclick = () => stopViewer(true);
 
+/**
+ * Volta do link do e-mail (confirmação de cadastro): o Supabase entrega a sessão no
+ * fragmento da URL. Guarda a sessão e limpa a URL, para o token não ficar no
+ * histórico nem ser copiado junto com o endereço.
+ */
+function consumeAuthRedirect() {
+  if (!location.hash || location.hash.length < 2) return;
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (!p.has('access_token') && !p.has('error')) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  if (p.has('error')) {
+    toast('Link inválido ou expirado: ' + (p.get('error_description') || p.get('error')));
+    return;
+  }
+  // O id de uma sessão anterior (outra conta) não vale: enterApp busca o certo.
+  sessionStorage.removeItem('ci_uid');
+  saveSession({ access_token: p.get('access_token'), refresh_token: p.get('refresh_token') });
+  toast(p.get('type') === 'signup' ? 'E-mail confirmado!' : 'Sessão iniciada.');
+}
+
+consumeAuthRedirect();
 loadCfg();
 </script>
 </body>
