@@ -200,6 +200,16 @@ class SupabaseClient(context: Context) {
         }
     }
 
+    /** Reporta ao backend os apps abríveis do aparelho e se cada um está liberado. */
+    fun reportApps(apps: List<Triple<String, String, Boolean>>): Boolean {
+        if (!DeviceIdentity.isRegistered(appContext)) return false
+        val arr = JSONArray()
+        apps.forEach { (pkg, label, allowed) ->
+            arr.put(JSONObject().put("package", pkg).put("label", label).put("allowed", allowed))
+        }
+        return deviceRpc("device_report_apps") { put("p_apps", arr) }.ok
+    }
+
     fun postLocation(lat: Double, lon: Double, accuracy: Float) {
         if (!DeviceIdentity.isRegistered(appContext)) return
         deviceRpc("device_post_location") {

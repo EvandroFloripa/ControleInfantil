@@ -6,4 +6,7 @@
     <color name="primaryDark">#004D40</color>
     <color name="white">#FFFFFF</color>
     <color name="iconBg">#00897B</color>
+    <!-- Launcher: texto claro com sombra sobre o papel de parede. -->
+    <color name="launcherText">#FFFFFF</color>
+    <color name="launcherShadow">#CC000000</color>
 </resources>

@@ -2,7 +2,13 @@ package com.controleinfantil.kids.setup
 
 import android.app.admin.DevicePolicyManager
 import android.content.Intent
+import android.app.AlertDialog
+import android.content.pm.PackageManager
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import android.view.View
+import android.widget.Toast
 import android.widget.Button
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
@@ -34,6 +40,7 @@ class SetupActivity : GuardianActivity() {
         client = SupabaseClient(this)
 
         findViewById<Button>(R.id.btnEnableAdmin).setOnClickListener { requestDeviceAdmin() }
+        ensureLocationPermission()
         findViewById<Button>(R.id.btnPairingCode).setOnClickListener { generatePairingCode() }
         findViewById<Button>(R.id.btnChooseApps).setOnClickListener {
             startActivity(Intent(this, AppPickerActivity::class.java))
@@ -41,6 +48,7 @@ class SetupActivity : GuardianActivity() {
         findViewById<Button>(R.id.btnSchedule).setOnClickListener {
             startActivity(Intent(this, ScheduleActivity::class.java))
         }
+        findViewById<Button>(R.id.btnReleaseDevice).setOnClickListener { confirmReleaseDevice() }
 
         refreshStatus()
     }
@@ -52,11 +60,31 @@ class SetupActivity : GuardianActivity() {
         refreshStatus()
     }
 
+    /** Única saída do modo travado sem resetar o aparelho; pede confirmação. */
+    private fun confirmReleaseDevice() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.release_title)
+            .setMessage(R.string.release_message)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.release_confirm) { _, _ ->
+                val ok = KioskManager(this).releaseDevice(this)
+                Toast.makeText(
+                    this,
+                    if (ok) R.string.release_done else R.string.release_failed,
+                    Toast.LENGTH_LONG,
+                ).show()
+                refreshStatus()
+            }
+            .show()
+    }
+
     private fun refreshStatus() {
         val admin = if (policy.isAdminActive) "✅ ativo" else "❌ inativo"
         val owner = if (policy.isDeviceOwner) "✅ ativo" else "❌ inativo (ver ADB)"
         findViewById<TextView>(R.id.status).text =
             getString(R.string.status_fmt, admin, owner)
+        findViewById<View>(R.id.btnReleaseDevice).visibility =
+            if (policy.isDeviceOwner) View.VISIBLE else View.GONE
 
         val id = DeviceIdentity.id(this)
         findViewById<TextView>(R.id.deviceId).text =
@@ -67,6 +95,22 @@ class SetupActivity : GuardianActivity() {
         findViewById<TextView>(R.id.allowedSummary).text =
             resources.getQuantityString(R.plurals.picker_count, liberados, liberados)
     }
+
+    /**
+     * No aparelho provisionado o Device Owner já concede a localização sozinho. Fora
+     * dele (testes, ou antes de provisionar) pedimos em runtime — sem isso o "Pedir
+     * localização" nunca teria posição para enviar.
+     */
+    private fun ensureLocationPermission() {
+        if (policy.isDeviceOwner) return
+        val fine = android.Manifest.permission.ACCESS_FINE_LOCATION
+        val granted = ContextCompat.checkSelfPermission(this, fine) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!granted) locationPermission.launch(fine)
+    }
+
+    private val locationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     private fun requestDeviceAdmin() {
         if (policy.isAdminActive) return

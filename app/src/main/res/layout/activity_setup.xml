@@ -97,5 +97,16 @@
             android:textSize="13sp"
             android:paddingTop="24dp" />
 
+        <!-- Só aparece como Device Owner: tira as travas para poder desinstalar. -->
+        <Button
+            android:id="@+id/btnReleaseDevice"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/release_button"
+            android:textColor="#B00020"
+            android:visibility="gone" />
+
     </LinearLayout>
 </ScrollView>

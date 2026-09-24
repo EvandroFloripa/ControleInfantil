@@ -7,13 +7,16 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.net.Uri
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.controleinfantil.kids.R
 import com.controleinfantil.kids.admin.PolicyManager
 import com.controleinfantil.kids.checkin.CheckinService
+import com.controleinfantil.kids.launcher.KioskManager
 import com.controleinfantil.kids.launcher.LauncherActivity
+import com.controleinfantil.kids.launcher.launchablePackages
 import com.controleinfantil.kids.location.LocationReporter
 import com.controleinfantil.kids.screen.ScreenCaptureActivity
 import com.controleinfantil.kids.screen.ScreenShareService
@@ -42,6 +45,7 @@ class CommandService : Service() {
     private lateinit var client: SupabaseClient
     private lateinit var policy: PolicyManager
     private lateinit var location: LocationReporter
+    private var lastAppsSig: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -76,6 +80,7 @@ class CommandService : Service() {
 
                 if (client.ensureRegistered()) {
                     client.heartbeat()
+                    syncApps()
                     client.fetchPendingCommands().forEach { execute(it) }
                 } else {
                     Log.w(TAG, "Aparelho ainda não registrado (verifique SupabaseConfig)")
@@ -120,6 +125,19 @@ class CommandService : Service() {
         }
     }
 
+    /**
+     * Manda ao painel a lista de apps abríveis e quais estão liberados, mas só quando
+     * muda (instalou/removeu app ou o responsável mudou a lista) — evita reenviar a
+     * cada 15 s.
+     */
+    private fun syncApps() {
+        val allowed = KioskManager(this).allowedPackages
+        val apps = launchablePackages().map { (pkg, label) -> Triple(pkg, label, pkg in allowed) }
+        val sig = apps.joinToString("|") { "${it.first}=${it.third}" }.hashCode().toString()
+        if (sig == lastAppsSig) return
+        if (client.reportApps(apps)) lastAppsSig = sig
+    }
+
     private suspend fun execute(cmd: Command) {
         Log.i(TAG, "Executando comando ${cmd.type} (${cmd.id})")
         val result: String = when (cmd.type) {
@@ -150,6 +168,12 @@ class CommandService : Service() {
                 ScreenShareService.stop(this)
                 "done"
             }
+            Command.Type.SET_ALLOWED_APPS -> {
+                KioskManager(this).allowedPackages = cmd.packages.toSet()
+                lastAppsSig = null      // força re-report para o painel refletir
+                "done"
+            }
+            Command.Type.INSTALL_APP -> openPlayStore(cmd.appPackage)
             Command.Type.UNKNOWN -> "unsupported"
         }
         val detail = when (result) {
@@ -161,6 +185,33 @@ class CommandService : Service() {
         }
         val status = if (result == "done" || result == "started") "done" else "error"
         client.reportCommandResult(cmd.id, status, detail ?: result.takeIf { it != "done" })
+    }
+
+    /**
+     * Abre a página do app no Google Play. A instalação em si é feita pela loja e
+     * pede um toque. Num aparelho travado em quiosque, o Google Play precisa estar
+     * liberado (o responsável pode liberá-lo pelo painel na hora de instalar).
+     */
+    private fun openPlayStore(pkg: String): String {
+        if (pkg.isBlank()) return "error"
+        return try {
+            val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                startActivity(market)
+            } catch (e: android.content.ActivityNotFoundException) {
+                startActivity(
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://play.google.com/store/apps/details?id=$pkg"),
+                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            }
+            "done"
+        } catch (e: Exception) {
+            Log.e(TAG, "Não consegui abrir o Google Play para $pkg", e)
+            "error"
+        }
     }
 
     private fun asStatus(r: PolicyManager.Result): String = when (r) {

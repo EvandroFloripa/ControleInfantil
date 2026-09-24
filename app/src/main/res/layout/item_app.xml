@@ -3,25 +3,29 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:gravity="center"
-    android:padding="8dp"
+    android:gravity="center_horizontal"
+    android:paddingHorizontal="4dp"
+    android:paddingVertical="12dp"
     android:background="?attr/selectableItemBackgroundBorderless">
 
     <ImageView
         android:id="@+id/appIcon"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
         android:contentDescription="@string/app_icon_desc" />
 
+    <!-- Sombra no rótulo: legível em papel de parede claro ou escuro. -->
     <TextView
         android:id="@+id/appLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:maxLines="1"
+        android:maxLines="2"
         android:ellipsize="end"
-        android:textColor="@color/kidText"
-        android:textSize="12sp"
-        android:paddingTop="4dp" />
+        android:textColor="@color/launcherText"
+        android:textSize="13sp"
+        android:shadowColor="@color/launcherShadow"
+        android:shadowRadius="4"
+        android:paddingTop="6dp" />
 
 </LinearLayout>

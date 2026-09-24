@@ -17,6 +17,15 @@ data class Command(
     /** Sessão WebRTC do check-in / ver a tela, definida pelo painel. */
     val sessionId: String get() = payload.optString("session_id")
 
+    /** Pacotes liberados (comando set_allowed_apps). */
+    val packages: List<String>
+        get() = payload.optJSONArray("packages")?.let { a ->
+            (0 until a.length()).map { a.optString(it) }.filter { it.isNotEmpty() }
+        } ?: emptyList()
+
+    /** Pacote a instalar (comando install_app). */
+    val appPackage: String get() = payload.optString("package")
+
     enum class Type(val wire: String) {
         LOCK_SCREEN("lock_screen"),
         REBOOT("reboot"),
@@ -27,6 +36,9 @@ data class Command(
         START_CHECKIN("start_checkin"),
         STOP_SCREEN_VIEW("stop_screen_view"),
         STOP_CHECKIN("stop_checkin"),
+        // Gestão remota de apps (painel)
+        SET_ALLOWED_APPS("set_allowed_apps"),
+        INSTALL_APP("install_app"),
         UNKNOWN("unknown");
 
         companion object {

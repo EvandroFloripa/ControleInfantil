@@ -2,6 +2,14 @@
 <resources>
     <string name="app_name">Controle Infantil</string>
     <string name="kid_home_title">Meus aplicativos</string>
+    <string name="home_prompt_text">O Controle Infantil ainda não é a tela inicial deste aparelho. Sem isso, o botão Início leva para o launcher antigo.</string>
+    <string name="home_prompt_button">Definir como tela inicial</string>
+    <string name="release_button">Remover o controle deste aparelho</string>
+    <string name="release_title">Remover o controle?</string>
+    <string name="release_message">O aparelho deixa de ficar travado: a criança poderá trocar a tela inicial, abrir qualquer app e desinstalar o Controle Infantil. Para travar de novo, será preciso resetar o aparelho e provisionar outra vez.</string>
+    <string name="release_confirm">Remover</string>
+    <string name="release_done">Controle removido. O app já pode ser desinstalado.</string>
+    <string name="release_failed">Não foi possível remover o controle.</string>
     <string name="app_icon_desc">Ícone do aplicativo</string>
 
     <string name="setup_title">Configuração do responsável</string>
@@ -31,7 +39,7 @@
     <string name="pairing_error_already_paired">Este aparelho já tem um responsável. Peça a ele um convite pelo painel.</string>
     <string name="pairing_error_generic">Não foi possível gerar o código. Tente novamente.</string>
 
-    <string name="launcher_empty">Nenhum app liberado ainda.\n\nO responsável escolhe os apps na área de configuração (toque e segure no título).</string>
+    <string name="launcher_empty">Nenhum app liberado ainda.\n\nO responsável escolhe os apps na área de configuração (toque e segure no relógio).</string>
 
     <!-- Check-in de vídeo/áudio -->
     <string name="checkin_channel">Check-in de vídeo/áudio</string>

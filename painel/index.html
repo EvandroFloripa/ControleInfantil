@@ -146,6 +146,31 @@
     <p class="muted" id="viewerNote" style="margin-top:8px"></p>
   </div>
 
+  <!-- 4b. Aplicativos -->
+  <div class="card hidden" id="appsCard">
+    <h2>Aplicativos</h2>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <button class="secondary" id="btnLoadApps">Atualizar lista</button>
+      <span class="muted" id="appsHint"></span>
+    </div>
+    <div id="appsList" class="muted">—</div>
+    <div style="margin-top:12px">
+      <button id="btnSaveApps">Salvar apps liberados</button>
+    </div>
+    <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
+    <h3 style="margin:0 0 8px;font-size:15px">Instalar um app</h3>
+    <div class="row" style="gap:8px">
+      <input id="installInput" placeholder="ID do pacote ou link do Google Play"
+             style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px">
+      <button class="secondary" id="btnInstallApp">Instalar</button>
+    </div>
+    <p class="muted" style="margin-top:8px">
+      Abre a página do app no Google Play do celular da criança; a instalação usa a
+      própria loja e pede um toque. Num aparelho travado em quiosque, libere o Google
+      Play na lista acima antes de instalar.
+    </p>
+  </div>
+
   <!-- 5. Localização -->
   <div class="card hidden" id="locationCard">
     <h2>Última localização</h2>
@@ -465,9 +490,11 @@ function selectDevice(d) {
   state.selected = d.id;
   const isGuardian = state.roles[d.id] === 'guardian';
   $('selectedLabel').textContent = d.label;
-  ['commandsCard', 'locationCard', 'peopleCard', 'historyCard']
+  ['commandsCard', 'appsCard', 'locationCard', 'peopleCard', 'historyCard']
     .forEach(c => $(c).classList.remove('hidden'));
   document.querySelectorAll('[data-cmd]').forEach(b => { b.disabled = !isGuardian; });
+  ['btnLoadApps', 'btnSaveApps', 'btnInstallApp', 'installInput']
+    .forEach(id => { $(id).disabled = !isGuardian; });
   $('viewerNote').textContent = isGuardian
     ? '' : 'Você é observador neste aparelho: pode ver, mas não enviar comandos.';
   $('inviteArea').classList.toggle('hidden', !isGuardian);
@@ -476,6 +503,7 @@ function selectDevice(d) {
   renderDevices();
   loadHistory();
   loadPeople();
+  loadApps();
 }
 
 $('btnRefresh').onclick = loadDevices;
@@ -518,6 +546,63 @@ async function sendCommand(type) {
     setTimeout(loadHistory, 800);
   } catch (e) { toast(e.message); }
 }
+
+// --- 4b. Aplicativos ------------------------------------------------------
+let deviceApps = [];
+
+async function loadApps() {
+  if (!state.selected) return;
+  try {
+    deviceApps = await select(
+      `device_apps?device_id=eq.${state.selected}&order=label.asc&select=package,label,allowed`);
+    renderApps();
+  } catch (e) { toast(e.message); }
+}
+
+function renderApps() {
+  const box = $('appsList');
+  if (!deviceApps.length) {
+    box.textContent = 'O celular ainda não enviou a lista de apps. Abra o Controle ' +
+      'Infantil na criança e aguarde alguns segundos, depois toque em "Atualizar lista".';
+    return;
+  }
+  box.innerHTML = deviceApps.map((a, i) =>
+    `<label class="row" style="justify-content:space-between;padding:6px 0;cursor:pointer">
+       <span>${esc(a.label)}</span>
+       <input type="checkbox" data-app="${i}" ${a.allowed ? 'checked' : ''}>
+     </label>`).join('');
+}
+
+$('btnLoadApps').onclick = loadApps;
+
+$('btnSaveApps').onclick = async () => {
+  const packages = [];
+  document.querySelectorAll('#appsList [data-app]').forEach(b => {
+    if (b.checked) packages.push(deviceApps[+b.getAttribute('data-app')].package);
+  });
+  try {
+    await rpc('controller_send_command', {
+      p_device: state.selected, p_type: 'set_allowed_apps', p_payload: { packages },
+    });
+    toast('Lista enviada ✅ o celular aplica em alguns segundos');
+    setTimeout(loadApps, 4000);
+  } catch (e) { toast(e.message); }
+};
+
+$('btnInstallApp').onclick = async () => {
+  const raw = $('installInput').value.trim();
+  // Aceita o ID do pacote (com.exemplo.app) ou um link com ?id=...
+  const m = raw.match(/[?&]id=([\w.]+)/) || raw.match(/^([\w.]+(?:\.[\w.]+)+)$/);
+  if (!m) return toast('Informe o ID do pacote, ex.: com.exemplo.app');
+  try {
+    await rpc('controller_send_command', {
+      p_device: state.selected, p_type: 'install_app', p_payload: { package: m[1] },
+    });
+    toast('Pedido de instalação enviado ✅');
+    $('installInput').value = '';
+    setTimeout(loadApps, 8000);
+  } catch (e) { toast(e.message); }
+};
 
 // --- 5. Localização -------------------------------------------------------
 $('btnLoadLocation').onclick = async () => {
@@ -572,7 +657,7 @@ async function unlink(controllerId) {
     await rpc('controller_unlink', { p_device: state.selected, p_controller: controllerId });
     toast('Feito ✅');
     if (eu) { state.selected = null; loadDevices();
-      ['commandsCard','locationCard','peopleCard','historyCard']
+      ['commandsCard','appsCard','locationCard','peopleCard','historyCard']
         .forEach(c => $(c).classList.add('hidden')); }
     else loadPeople();
   } catch (e) { toast(e.message); }

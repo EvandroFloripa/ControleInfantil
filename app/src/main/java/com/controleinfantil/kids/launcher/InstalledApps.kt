@@ -35,3 +35,22 @@ fun Context.launchableApps(): List<AppInfo> {
         }
         .sortedBy { it.label.lowercase() }
 }
+
+/**
+ * Só pacote + nome dos apps abríveis, sem carregar ícones — leve o bastante para
+ * reportar a lista ao painel a cada ciclo, sem o custo de [launchableApps].
+ */
+fun Context.launchablePackages(): List<Pair<String, String>> {
+    val intent = Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER)
+    return packageManager.queryIntentActivities(intent, 0)
+        .map { it.activityInfo.packageName }
+        .distinct()
+        .filter { it != packageName }
+        .mapNotNull { pkg ->
+            runCatching {
+                val info = packageManager.getApplicationInfo(pkg, 0)
+                pkg to packageManager.getApplicationLabel(info).toString()
+            }.getOrNull()
+        }
+        .sortedBy { it.second.lowercase() }
+}
