@@ -18,6 +18,7 @@ import com.controleinfantil.kids.launcher.KioskManager
 import com.controleinfantil.kids.launcher.LauncherActivity
 import com.controleinfantil.kids.launcher.launchablePackages
 import com.controleinfantil.kids.block.InstallAllow
+import com.controleinfantil.kids.block.SilentInstaller
 import com.controleinfantil.kids.lock.LockScreen
 import com.controleinfantil.kids.setup.GuardianPin
 import com.controleinfantil.kids.location.LocationReporter
@@ -234,7 +235,16 @@ class CommandService : Service() {
                 lastAppsSig = null      // força re-report para o painel refletir
                 "done"
             }
-            Command.Type.INSTALL_APP -> openPlayStore(cmd.appPackage)
+            Command.Type.INSTALL_APP -> {
+                val url = cmd.apkUrl
+                if (url.isNotBlank() && policy.isDeviceOwner) {
+                    // Device Owner: baixa e instala sem abrir a Play nem pedir toque.
+                    if (SilentInstaller.install(this, url)) "done" else "error"
+                } else {
+                    // Sem link/Device Owner: abre a Play (precisa de conta e um toque).
+                    openPlayStore(cmd.appPackage)
+                }
+            }
             Command.Type.SET_TIME_RULES -> {
                 val p = cmd.payload
                 TimeRules.save(

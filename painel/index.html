@@ -158,14 +158,14 @@
     <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
     <h3 style="margin:0 0 8px;font-size:15px">Instalar um app</h3>
     <div class="row" style="gap:8px">
-      <input id="installInput" placeholder="ID do pacote ou link do Google Play"
+      <input id="installInput" placeholder="ID do pacote, link da Play, ou link .apk"
              style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px">
       <button class="secondary" id="btnInstallApp">Instalar</button>
     </div>
     <p class="muted" style="margin-top:8px">
-      Abre a página do app no Google Play do celular da criança; a instalação usa a
-      própria loja e pede um toque. Num aparelho travado em quiosque, libere o Google
-      Play na lista acima antes de instalar.
+      <b>ID do pacote / link da Play:</b> abre a loja no celular (precisa de conta
+      Google e um toque). <b>Link .apk:</b> instala direto, sem abrir nada — só
+      funciona se o celular for Device Owner.
     </p>
   </div>
 
@@ -638,12 +638,19 @@ $('btnSaveApps').onclick = async () => {
 
 $('btnInstallApp').onclick = async () => {
   const raw = $('installInput').value.trim();
-  // Aceita o ID do pacote (com.exemplo.app) ou um link com ?id=...
-  const m = raw.match(/[?&]id=([\w.]+)/) || raw.match(/^([\w.]+(?:\.[\w.]+)+)$/);
-  if (!m) return toast('Informe o ID do pacote, ex.: com.exemplo.app');
+  let payload;
+  if (/^https?:\/\/.+\.apk(\?.*)?$/i.test(raw)) {
+    // Link de APK: instalação silenciosa (só funciona no celular Device Owner).
+    payload = { apk_url: raw };
+  } else {
+    // ID do pacote (com.exemplo.app) ou link da Play com ?id=... → abre a Play.
+    const m = raw.match(/[?&]id=([\w.]+)/) || raw.match(/^([\w.]+(?:\.[\w.]+)+)$/);
+    if (!m) return toast('Informe o ID do pacote (com.exemplo.app) ou um link .apk');
+    payload = { package: m[1] };
+  }
   try {
     await rpc('controller_send_command', {
-      p_device: state.selected, p_type: 'install_app', p_payload: { package: m[1] },
+      p_device: state.selected, p_type: 'install_app', p_payload: payload,
     });
     toast('Pedido de instalação enviado ✅');
     $('installInput').value = '';

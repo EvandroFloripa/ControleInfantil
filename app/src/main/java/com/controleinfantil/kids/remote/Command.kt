@@ -26,6 +26,9 @@ data class Command(
     /** Pacote a instalar (comando install_app). */
     val appPackage: String get() = payload.optString("package")
 
+    /** Link do APK para instalação silenciosa (Device Owner). */
+    val apkUrl: String get() = payload.optString("apk_url")
+
     enum class Type(val wire: String) {
         LOCK_SCREEN("lock_screen"),
         REBOOT("reboot"),

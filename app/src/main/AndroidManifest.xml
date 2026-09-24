@@ -123,5 +123,10 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- Resultado da instalação silenciosa (Device Owner). -->
+        <receiver
+            android:name=".block.InstallResultReceiver"
+            android:exported="false" />
+
     </application>
 </manifest>
