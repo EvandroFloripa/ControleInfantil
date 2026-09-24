@@ -17,6 +17,7 @@ import com.controleinfantil.kids.checkin.CheckinService
 import com.controleinfantil.kids.launcher.KioskManager
 import com.controleinfantil.kids.launcher.LauncherActivity
 import com.controleinfantil.kids.launcher.launchablePackages
+import com.controleinfantil.kids.block.InstallAllow
 import com.controleinfantil.kids.lock.LockScreen
 import com.controleinfantil.kids.setup.GuardianPin
 import com.controleinfantil.kids.location.LocationReporter
@@ -236,6 +237,9 @@ class CommandService : Service() {
      */
     private fun openPlayStore(pkg: String): String {
         if (pkg.isBlank()) return "error"
+        // Libera a Play por alguns minutos para o bloqueio por Acessibilidade não
+        // chutar a criança de volta ao launcher durante a instalação.
+        InstallAllow.allowPlay(this)
         return try {
             val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg"))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

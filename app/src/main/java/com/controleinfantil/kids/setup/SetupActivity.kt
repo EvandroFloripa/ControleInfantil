@@ -49,6 +49,9 @@ class SetupActivity : GuardianActivity() {
         }
         findViewById<Button>(R.id.btnReleaseDevice).setOnClickListener { confirmReleaseDevice() }
         findViewById<Button>(R.id.btnOverlay).setOnClickListener { requestOverlay() }
+        findViewById<Button>(R.id.btnAccessibility).setOnClickListener {
+            startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
         ensureRuntimePermissions()
 
         refreshStatus()
@@ -91,6 +94,11 @@ class SetupActivity : GuardianActivity() {
             android.provider.Settings.canDrawOverlays(this)
         findViewById<View>(R.id.btnOverlay).visibility =
             if (overlayOk) View.GONE else View.VISIBLE
+        // Bloqueio por Acessibilidade: botão some quando já está ligado (ou é DO).
+        val blockOk = policy.isDeviceOwner ||
+            com.controleinfantil.kids.block.AppBlockerService.isEnabled(this)
+        findViewById<View>(R.id.btnAccessibility).visibility =
+            if (blockOk) View.GONE else View.VISIBLE
 
         val id = DeviceIdentity.id(this)
         findViewById<TextView>(R.id.deviceId).text =

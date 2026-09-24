@@ -109,5 +109,19 @@
             </intent-filter>
         </receiver>
 
+        <!-- Bloqueio de apps fora da lista, sem Device Owner (o responsável liga
+             a Acessibilidade nas Configurações). -->
+        <service
+            android:name=".block.AppBlockerService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
     </application>
 </manifest>

@@ -64,6 +64,9 @@
     <string name="lock_unlock">Desbloquear</string>
     <string name="overlay_button">Permitir bloqueio de tela</string>
     <string name="overlay_needed">Para o "Bloquear tela" funcionar de verdade, permita sobrepor a outros apps.</string>
+    <string name="accessibility_desc">Detecta qual aplicativo está aberto para bloquear os que o responsável não liberou. Não lê o conteúdo da tela.</string>
+    <string name="accessibility_button">Ativar bloqueio de apps</string>
+    <string name="accessibility_label">Controle Infantil — bloqueio de apps</string>
     <string name="pin_confirm_hint">Repita o PIN</string>
     <string name="pin_too_short">O PIN precisa ter pelo menos %1$d números.</string>
     <string name="pin_mismatch">Os dois PINs não são iguais.</string>

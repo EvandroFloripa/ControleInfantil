@@ -42,6 +42,15 @@
             android:visibility="gone" />
 
         <Button
+            android:id="@+id/btnAccessibility"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/accessibility_button"
+            android:visibility="gone" />
+
+        <Button
             android:id="@+id/btnEnableAdmin"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
