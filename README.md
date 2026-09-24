@@ -56,11 +56,40 @@ tela, e isso é proposital.
    ADB em um aparelho recém-resetado. O passo a passo está em
    [`docs/PROVISIONAMENTO.md`](docs/PROVISIONAMENTO.md).
 2. **Backend:** rode o [`supabase/schema.sql`](supabase/schema.sql) no seu projeto Supabase.
-3. **Configuração do app:** preencha a URL e a chave do Supabase (veja
-   `app/src/main/java/com/controleinfantil/kids/remote/SupabaseConfig.kt`).
-4. **Build:** abra a pasta no Android Studio e rode no aparelho.
+3. **Configuração do app:** a URL e a chave anon do Supabase entram no build, fora
+   do código. Localmente, coloque no `local.properties` (não versionado):
+   ```properties
+   supabase.url=https://SEU-PROJETO.supabase.co
+   supabase.anonKey=SUA_ANON_KEY
+   ```
+4. **Build:** abra a pasta no Android Studio e rode no aparelho — ou baixe o APK
+   gerado pela CI (abaixo).
 5. **Painel:** abra `painel/index.html` no navegador, informe a mesma URL e chave,
    crie sua conta e pareie (passo abaixo).
+
+## CI e publicação do APK
+
+O workflow [`.github/workflows/android.yml`](.github/workflows/android.yml) roda no
+GitHub Actions:
+
+- **Todo push e pull request:** compila e guarda os APKs (debug e release assinado)
+  como artefatos do run, na aba *Actions*.
+- **Tag `v*`:** gera o release assinado e publica numa **GitHub Release**. Para
+  lançar uma versão:
+  ```bash
+  git tag v0.2.0
+  git push origin v0.2.0
+  ```
+  O `versionName` vem da tag e o `versionCode` do número do run.
+
+Secrets usados (*Settings → Secrets and variables → Actions*): `KEYSTORE_BASE64`,
+`KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, `SUPABASE_URL` e
+`SUPABASE_ANON_KEY`. Sem a chave ou sem o Supabase, a tag falha em vez de publicar
+um APK inútil.
+
+**Guarde um backup da chave de assinatura.** O Android só instala uma atualização
+por cima do app se ela for assinada com a mesma chave; sem ela, é preciso
+desinstalar — e um Device Owner exige resetar o aparelho para instalar de novo.
 
 ## Ver a tela e check-in de vídeo/áudio
 

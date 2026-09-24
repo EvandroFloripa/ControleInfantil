@@ -1,7 +1,23 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+// Segredos de build: variáveis de ambiente (CI) ou local.properties (máquina local).
+// Nada disso vai para o git.
+val localProps = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+fun secret(env: String, prop: String, default: String = ""): String =
+    System.getenv(env)?.takeIf { it.isNotBlank() }
+        ?: localProps.getProperty(prop)?.takeIf { it.isNotBlank() }
+        ?: default
+
+fun String.asBuildConfigString() = "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+val releaseKeystore = secret("KEYSTORE_FILE", "release.storeFile")
 
 android {
     namespace = "com.controleinfantil.kids"
@@ -11,12 +27,34 @@ android {
         applicationId = "com.controleinfantil.kids"
         minSdk = 26          // Android 8.0 — necessário para várias APIs de Device Owner
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        // A CI passa a versão (número do build e a tag); localmente fica o padrão.
+        versionCode = secret("VERSION_CODE", "versionCode", "1").toInt()
+        versionName = secret("VERSION_NAME", "versionName", "0.1.0")
+
+        // Os placeholders mantêm o app compilando sem configuração; ele só avisa que
+        // o Supabase não foi configurado (ver SupabaseClient.isConfigured).
+        buildConfigField("String", "SUPABASE_URL",
+            secret("SUPABASE_URL", "supabase.url", "https://SEU-PROJETO.supabase.co").asBuildConfigString())
+        buildConfigField("String", "SUPABASE_ANON_KEY",
+            secret("SUPABASE_ANON_KEY", "supabase.anonKey", "COLE_SUA_ANON_KEY_AQUI").asBuildConfigString())
+    }
+
+    signingConfigs {
+        create("release") {
+            if (releaseKeystore.isNotEmpty()) {
+                storeFile = file(releaseKeystore)
+                storePassword = secret("KEYSTORE_PASSWORD", "release.storePassword")
+                keyAlias = secret("KEY_ALIAS", "release.keyAlias")
+                keyPassword = secret("KEY_PASSWORD", "release.keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
+            // Sem keystore configurado o release sai sem assinatura (não instala);
+            // a CI sempre fornece a chave.
+            if (releaseKeystore.isNotEmpty()) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -36,6 +74,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 

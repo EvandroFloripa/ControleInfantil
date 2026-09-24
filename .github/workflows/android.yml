@@ -1,0 +1,121 @@
+# Gera o APK do app da criança.
+#
+# - Todo push e pull request: compila e guarda os APKs (debug e, com a chave
+#   disponível, release assinado) como artefatos do workflow.
+# - Tag v* (ex.: v0.2.0): gera o release assinado e publica numa GitHub Release.
+#
+# Secrets do repositório (Settings -> Secrets and variables -> Actions):
+#   KEYSTORE_BASE64    keystore de release em base64
+#   KEYSTORE_PASSWORD  senha do keystore
+#   KEY_ALIAS          alias da chave
+#   KEY_PASSWORD       senha da chave
+#   SUPABASE_URL       URL do projeto Supabase
+#   SUPABASE_ANON_KEY  chave anon do Supabase
+name: Android
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # criar a Release nas tags
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # O wrapper do Gradle não é versionado; a action instala a mesma versão
+      # (a de gradle/wrapper/gradle-wrapper.properties) e cuida do cache.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Versão
+        run: |
+          if [ "$IS_TAG" = "true" ]; then
+            VERSION_NAME="${GITHUB_REF_NAME#v}"
+          else
+            VERSION_NAME="0.0.0-dev.${GITHUB_RUN_NUMBER}+${GITHUB_SHA::7}"
+          fi
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+          echo "Versão $VERSION_NAME (código $GITHUB_RUN_NUMBER)"
+
+      - name: Chave de assinatura
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "HAS_KEYSTORE=true" >> "$GITHUB_ENV"
+          else
+            # PRs de forks não recebem secrets: segue só com o debug.
+            echo "HAS_KEYSTORE=false" >> "$GITHUB_ENV"
+            echo "::warning::KEYSTORE_BASE64 ausente; o release assinado não será gerado."
+          fi
+
+      - name: Conferir configuração da Release
+        if: env.IS_TAG == 'true'
+        run: |
+          # Um APK publicado sem chave ou sem Supabase não serve para instalar/usar.
+          [ "$HAS_KEYSTORE" = "true" ] || { echo "::error::Tag sem KEYSTORE_BASE64."; exit 1; }
+          [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ] ||
+            { echo "::error::Tag sem SUPABASE_URL/SUPABASE_ANON_KEY."; exit 1; }
+
+      - name: Aviso de Supabase não configurado
+        if: env.IS_TAG != 'true' && (env.SUPABASE_URL == '' || env.SUPABASE_ANON_KEY == '')
+        run: echo "::warning::SUPABASE_URL/SUPABASE_ANON_KEY ausentes; o APK sai com placeholders."
+
+      - name: Build debug
+        run: gradle :app:assembleDebug --no-daemon
+
+      - name: Build release
+        if: env.HAS_KEYSTORE == 'true'
+        run: gradle :app:assembleRelease --no-daemon
+
+      - name: Organizar APKs
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/ControleInfantil-${VERSION_NAME}-debug.apk"
+          if [ "$HAS_KEYSTORE" = "true" ]; then
+            cp app/build/outputs/apk/release/app-release.apk "dist/ControleInfantil-${VERSION_NAME}.apk"
+          fi
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ControleInfantil-${{ env.VERSION_NAME }}
+          path: dist/*.apk
+          if-no-files-found: error
+
+      - name: Publicar Release
+        if: env.IS_TAG == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/ControleInfantil-${VERSION_NAME}.apk" \
+            --title "Controle Infantil ${VERSION_NAME}" \
+            --generate-notes
