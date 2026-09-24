@@ -83,20 +83,7 @@
 </header>
 <main>
 
-  <!-- 1. Conexão ao projeto Supabase -->
-  <div class="card" id="configCard">
-    <h2>Conexão</h2>
-    <label>URL do Supabase</label>
-    <input id="cfgUrl" placeholder="https://SEU-PROJETO.supabase.co" />
-    <label>Chave anon (publishable)</label>
-    <input id="cfgKey" placeholder="anon key" />
-    <div class="row" style="margin-top:12px">
-      <button id="btnSaveCfg">Salvar</button>
-      <span class="muted" id="cfgStatus"></span>
-    </div>
-  </div>
-
-  <!-- 2. Login do responsável -->
+  <!-- Login do responsável -->
   <div class="card hidden" id="authCard">
     <h2><span id="authTitle">Entrar</span></h2>
     <label>E-mail</label>
@@ -225,6 +212,12 @@
 
 <script>
 const $ = id => document.getElementById(id);
+// Projeto Supabase deste painel. A URL e a chave anon (publishable) são públicas
+// por design — quem protege os dados é o RLS no banco. Ficam embutidas para o
+// responsável não precisar digitar nada; dá para sobrescrever em localStorage.
+const DEFAULT_URL = 'https://aqyfbusqdmfgqopizwqi.supabase.co';
+const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxeWZidXNxZG1mZ3FvcGl6d3FpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxOTU3MjUsImV4cCI6MjEwNTc3MTcyNX0.MioEaY1MclveM9nQqTXfZ88A1YVCgdjVpdwIt1xO5yQ';
+
 const state = {
   url: '', key: '', token: null, userId: null,
   devices: [], roles: {}, selected: null, signupMode: false
@@ -351,32 +344,15 @@ function normalizeSupabaseUrl(raw) {
 }
 
 function loadCfg() {
-  state.url = normalizeSupabaseUrl(localStorage.getItem('ci_url'));
-  state.key = localStorage.getItem('ci_key') || '';
+  // Config embutida; localStorage só serve para sobrescrever (uso avançado/testes).
+  state.url = normalizeSupabaseUrl(localStorage.getItem('ci_url') || DEFAULT_URL);
+  state.key = localStorage.getItem('ci_key') || DEFAULT_KEY;
   state.token = sessionStorage.getItem('ci_token');
   state.userId = sessionStorage.getItem('ci_uid');
-  $('cfgUrl').value = state.url;
-  $('cfgKey').value = state.key;
-  if (state.url && state.key) {
-    $('cfgStatus').textContent = '✅ salvo';
-    $('authCard').classList.remove('hidden');
-    if (state.token) enterApp();
-  }
-}
-
-$('btnSaveCfg').onclick = () => {
-  state.url = normalizeSupabaseUrl($('cfgUrl').value);
-  state.key = $('cfgKey').value.trim();
-  if (!state.url || !state.key) return toast('Preencha URL e chave');
-  if (state.url !== $('cfgUrl').value.trim().replace(/\/+$/, '')) {
-    $('cfgUrl').value = state.url;
-    toast('Era o link do dashboard; usei a URL da API do projeto.');
-  }
-  localStorage.setItem('ci_url', state.url);
-  localStorage.setItem('ci_key', state.key);
-  $('cfgStatus').textContent = '✅ salvo';
+  // Vai direto para o login — o responsável não vê dados de conexão.
   $('authCard').classList.remove('hidden');
-};
+  if (state.token) enterApp();
+}
 
 // --- 2. Login / cadastro --------------------------------------------------
 $('btnToggleAuth').onclick = () => {
@@ -428,7 +404,6 @@ $('btnLogout').onclick = () => {
 
 async function enterApp() {
   $('authCard').classList.add('hidden');
-  $('configCard').classList.add('hidden');
   $('btnLogout').classList.remove('hidden');
   $('devicesCard').classList.remove('hidden');
   // Sem o id do usuário não dá para saber quem é guardião; busca se faltar.
