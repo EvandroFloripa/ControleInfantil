@@ -26,6 +26,10 @@
     background: var(--card); border: 1px solid var(--border); border-radius: 12px;
     padding: 16px; margin-bottom: 16px;
   }
+  .tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+  .tabs button { background:var(--card); border:1px solid var(--border); border-radius:999px;
+    padding:8px 14px; cursor:pointer; font-size:14px; color:var(--fg); }
+  .tabs button.active { background:#00695C; color:#fff; border-color:#00695C; }
   .card h2 {
     font-size: 13px; margin: 0 0 12px; color: var(--muted);
     text-transform: uppercase; letter-spacing: .5px;
@@ -135,6 +139,16 @@
   </div>
 
   <!-- 4. Comandos -->
+  <!-- Abas (aparecem ao escolher um aparelho) -->
+  <div id="tabsBar" class="tabs hidden">
+    <button data-tab="commands" class="active">Comandos</button>
+    <button data-tab="apps">Aplicativos</button>
+    <button data-tab="time">Tempo de uso</button>
+    <button data-tab="location">Localização</button>
+    <button data-tab="history">Histórico</button>
+    <button data-tab="people">Pessoas</button>
+  </div>
+
   <div class="card hidden" id="commandsCard">
     <h2>Comandos — <span id="selectedLabel"></span></h2>
     <div class="grid">
@@ -543,12 +557,34 @@ function renderDevices() {
   });
 }
 
+const TAB_CARDS = {
+  commands: ['commandsCard'],
+  apps: ['appsCard'],
+  time: ['timeCard'],
+  location: ['locationCard'],
+  history: ['usageCard', 'historyCard'],
+  people: ['peopleCard'],
+};
+const ALL_TAB_CARDS = ['commandsCard', 'appsCard', 'timeCard', 'locationCard',
+  'usageCard', 'historyCard', 'peopleCard'];
+
+function showTab(name) {
+  state.activeTab = name;
+  ALL_TAB_CARDS.forEach(c => $(c).classList.add('hidden'));
+  (TAB_CARDS[name] || []).forEach(c => $(c).classList.remove('hidden'));
+  document.querySelectorAll('#tabsBar [data-tab]').forEach(b =>
+    b.classList.toggle('active', b.getAttribute('data-tab') === name));
+}
+document.querySelectorAll('#tabsBar [data-tab]').forEach(b => {
+  b.onclick = () => showTab(b.getAttribute('data-tab'));
+});
+
 function selectDevice(d) {
   state.selected = d.id;
   const isGuardian = state.roles[d.id] === 'guardian';
   $('selectedLabel').textContent = d.label;
-  ['commandsCard', 'appsCard', 'timeCard', 'usageCard', 'locationCard', 'peopleCard', 'historyCard']
-    .forEach(c => $(c).classList.remove('hidden'));
+  $('tabsBar').classList.remove('hidden');
+  showTab(state.activeTab || 'commands');
   document.querySelectorAll('[data-cmd]').forEach(b => { b.disabled = !isGuardian; });
   ['btnLoadApps', 'btnSaveApps', 'btnInstallApp', 'installInput',
    'timeEnabled', 'timeStart', 'timeEnd', 'timeLimit', 'btnSaveTime', 'appsSearch']
@@ -891,8 +927,8 @@ async function unlink(controllerId) {
     await rpc('controller_unlink', { p_device: state.selected, p_controller: controllerId });
     toast('Feito ✅');
     if (eu) { state.selected = null; loadDevices();
-      ['commandsCard','appsCard','timeCard','usageCard','locationCard','peopleCard','historyCard']
-        .forEach(c => $(c).classList.add('hidden')); }
+      $('tabsBar').classList.add('hidden');
+      ALL_TAB_CARDS.forEach(c => $(c).classList.add('hidden')); }
     else loadPeople();
   } catch (e) { toast(e.message); }
 }
