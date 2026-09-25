@@ -43,6 +43,7 @@ data class Command(
         SET_ALLOWED_APPS("set_allowed_apps"),
         INSTALL_APP("install_app"),
         SET_TIME_RULES("set_time_rules"),
+        GRANT_TIME("grant_time"),
         UNKNOWN("unknown");
 
         companion object {

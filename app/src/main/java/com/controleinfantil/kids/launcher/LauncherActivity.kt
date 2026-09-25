@@ -66,6 +66,10 @@ class LauncherActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.btnSetHome).setOnClickListener { requestHome() }
 
+        findViewById<View>(R.id.btnGuardianBlocked).setOnClickListener {
+            startActivity(Intent(this, SetupActivity::class.java))
+        }
+
         findViewById<View>(R.id.header).setOnLongClickListener {
             startActivity(Intent(this, SetupActivity::class.java))
             true
@@ -131,14 +135,17 @@ class LauncherActivity : AppCompatActivity() {
         showingBlocked = verdict.blocked
         val blockedView = findViewById<TextView>(R.id.blockedHint)
         val emptyView = findViewById<TextView>(R.id.emptyHint)
+        val guardianBtn = findViewById<View>(R.id.btnGuardianBlocked)
         if (verdict.blocked) {
             blockedView.text = blockedMessage(verdict)
             blockedView.visibility = View.VISIBLE
+            guardianBtn.visibility = View.VISIBLE
             emptyView.visibility = View.GONE
             recycler.visibility = View.GONE
             return
         }
         blockedView.visibility = View.GONE
+        guardianBtn.visibility = View.GONE
         recycler.visibility = View.VISIBLE
 
         lifecycleScope.launch {

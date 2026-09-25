@@ -94,6 +94,8 @@ class SetupActivity : GuardianActivity() {
      */
     private fun unlockForMaintenance() {
         GuardianArea.pauseBlocking(15 * 60_000L)
+        // Também suspende o limite de horário pelo mesmo tempo.
+        com.controleinfantil.kids.schedule.TimeRules.grantOverride(this, 15)
         runCatching { stopLockTask() }
         Toast.makeText(this, R.string.unlock_device_toast, Toast.LENGTH_LONG).show()
         refreshStatus()

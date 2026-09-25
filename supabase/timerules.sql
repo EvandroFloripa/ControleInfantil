@@ -15,7 +15,7 @@ alter table public.commands add constraint commands_type_check
         'start_screen_view', 'start_checkin',
         'stop_screen_view', 'stop_checkin',
         'set_allowed_apps', 'install_app',
-        'set_time_rules'));
+        'set_time_rules', 'grant_time'));
 
 create table if not exists public.device_status (
     device_id           uuid primary key references public.devices(id) on delete cascade,
@@ -24,8 +24,10 @@ create table if not exists public.device_status (
     end_minute          int not null default 1200,  -- 20:00
     daily_limit_minutes int not null default 0,     -- 0 = sem teto
     used_minutes_today  int not null default 0,
+    override_until      timestamptz,                -- tempo extra liberado até
     updated_at          timestamptz not null default now()
 );
+alter table public.device_status add column if not exists override_until timestamptz;
 
 -- ---------------------------------------------------------------------------
 --  Lado do APARELHO: reporta as regras vigentes e o uso de hoje.
@@ -37,7 +39,7 @@ begin
     perform private.assert_device(p_device, p_token);
     insert into public.device_status (
         device_id, time_enabled, start_minute, end_minute,
-        daily_limit_minutes, used_minutes_today, updated_at)
+        daily_limit_minutes, used_minutes_today, override_until, updated_at)
     values (
         p_device,
         coalesce((p_status ->> 'enabled')::boolean, false),
@@ -45,6 +47,8 @@ begin
         coalesce((p_status ->> 'end')::int, 1200),
         coalesce((p_status ->> 'limit')::int, 0),
         greatest(coalesce((p_status ->> 'used')::int, 0), 0),
+        case when coalesce((p_status ->> 'override_until')::bigint, 0) > 0
+             then to_timestamp((p_status ->> 'override_until')::bigint / 1000.0) end,
         now())
     on conflict (device_id) do update set
         time_enabled = excluded.time_enabled,
@@ -52,6 +56,7 @@ begin
         end_minute = excluded.end_minute,
         daily_limit_minutes = excluded.daily_limit_minutes,
         used_minutes_today = excluded.used_minutes_today,
+        override_until = excluded.override_until,
         updated_at = now();
 end $$;
 

@@ -204,6 +204,14 @@
       <option value="180">3 h</option>
     </select>
     <p class="muted" id="timeUsed" style="margin-top:8px">—</p>
+    <p class="muted" id="timeOverride" style="margin:4px 0 8px"></p>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <span class="muted" style="align-self:center">Tempo extra:</span>
+      <button class="secondary" data-grant="15">+15 min</button>
+      <button class="secondary" data-grant="30">+30 min</button>
+      <button class="secondary" data-grant="60">+1 h</button>
+      <button class="secondary" data-grant="0">Encerrar liberação</button>
+    </div>
     <button id="btnSaveTime" style="margin-top:4px">Salvar limites</button>
   </div>
 
@@ -545,6 +553,7 @@ function selectDevice(d) {
   ['btnLoadApps', 'btnSaveApps', 'btnInstallApp', 'installInput',
    'timeEnabled', 'timeStart', 'timeEnd', 'timeLimit', 'btnSaveTime', 'appsSearch']
     .forEach(id => { $(id).disabled = !isGuardian; });
+  document.querySelectorAll('[data-grant]').forEach(b => { b.disabled = !isGuardian; });
   $('viewerNote').textContent = isGuardian
     ? '' : 'Você é observador neste aparelho: pode ver, mas não enviar comandos.';
   $('inviteArea').classList.toggle('hidden', !isGuardian);
@@ -754,7 +763,7 @@ async function loadStatus(resetForm) {
   if (!state.selected) return;
   try {
     const rows = await select(`device_status?device_id=eq.${state.selected}` +
-      `&select=time_enabled,start_minute,end_minute,daily_limit_minutes,used_minutes_today`);
+      `&select=*`);
     deviceStatus = rows[0] || null;
     // Se o celular já reportou, mostra o que ele tem. Se não, só preenche os padrões
     // na primeira vez (ao trocar de aparelho) — nunca apaga o que o pai acabou de
@@ -793,7 +802,24 @@ function renderStatus() {
   $('timeEnd').value = minToTime(s.end_minute);
   $('timeLimit').value = String(s.daily_limit_minutes);
   $('timeUsed').textContent = `Usado hoje: ${s.used_minutes_today} min`;
+  const ate = s.override_until ? new Date(s.override_until) : null;
+  $('timeOverride').textContent = ate && ate > new Date()
+    ? `Tempo extra liberado até ${ate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+    : '';
 }
+
+document.querySelectorAll('[data-grant]').forEach(btn => {
+  btn.onclick = async () => {
+    const minutes = parseInt(btn.getAttribute('data-grant'), 10);
+    try {
+      await rpc('controller_send_command', {
+        p_device: state.selected, p_type: 'grant_time', p_payload: { minutes },
+      });
+      toast(minutes ? `Liberado +${minutes} min ✅ (aplica em alguns segundos)` : 'Liberação encerrada ✅');
+      setTimeout(() => loadStatus(false), 20000);
+    } catch (e) { toast('Não foi possível enviar: ' + e.message); }
+  };
+});
 
 $('btnSaveTime').onclick = async () => {
   try {

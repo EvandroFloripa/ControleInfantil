@@ -145,10 +145,13 @@ class CommandService : Service() {
         if (emUso) UsageTracker.record(this, elapsedSeconds)
 
         // Não interrompe o responsável enquanto ele ajusta as próprias regras.
-        if (emUso && !GuardianArea.inForeground && checkRules(this).blocked) {
+        val responsavel = GuardianArea.inForeground || GuardianArea.isUnlocked() ||
+            GuardianArea.isPaused()
+        if (emUso && !responsavel && checkRules(this).blocked) {
+            // Só traz o launcher com o aviso de descanso; não apaga mais a tela, que a
+            // cada 15 s impedia o responsável de entrar na área dele com o PIN.
             Log.i(TAG, "Limite de horário atingido; voltando ao launcher")
             showLauncher()
-            policy.lockNow()
         }
     }
 
@@ -187,8 +190,9 @@ class CommandService : Service() {
     private fun syncStatus() {
         val rules = TimeRules.load(this)
         val used = UsageTracker.usedMinutesToday(this)
+        val until = TimeRules.overrideUntil(this).takeIf { it > System.currentTimeMillis() } ?: 0L
         val sig = "${rules.enabled}|${rules.startMinute}|${rules.endMinute}|" +
-            "${rules.dailyLimitMinutes}|$used"
+            "${rules.dailyLimitMinutes}|$used|$until"
         if (sig == lastStatusSig) return
         val json = org.json.JSONObject()
             .put("enabled", rules.enabled)
@@ -196,6 +200,7 @@ class CommandService : Service() {
             .put("end", rules.endMinute)
             .put("limit", rules.dailyLimitMinutes)
             .put("used", used)
+            .put("override_until", until)
         if (client.reportStatus(json)) lastStatusSig = sig
     }
 
@@ -272,6 +277,14 @@ class CommandService : Service() {
                     ),
                 )
                 lastStatusSig = null   // reflete no painel na próxima volta
+                "done"
+            }
+            Command.Type.GRANT_TIME -> {
+                // Tempo extra pelo painel: libera por N minutos (0 encerra a liberação).
+                val minutes = cmd.payload.optInt("minutes", 0)
+                if (minutes > 0) TimeRules.grantOverride(this, minutes)
+                else TimeRules.clearOverride(this)
+                lastStatusSig = null
                 "done"
             }
             Command.Type.UNKNOWN -> "unsupported"

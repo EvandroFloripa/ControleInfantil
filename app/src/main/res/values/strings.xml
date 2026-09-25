@@ -71,6 +71,7 @@
     <string name="unlock_device_toast">Aparelho liberado por 15 min. Abra Configurações e faça o que precisar; o bloqueio volta sozinho.</string>
     <string name="relock_button">Reativar o bloqueio agora</string>
     <string name="relock_toast">Bloqueio reativado.</string>
+    <string name="guardian_area_button">Área do responsável</string>
     <string name="pin_confirm_hint">Repita o PIN</string>
     <string name="pin_too_short">O PIN precisa ter pelo menos %1$d números.</string>
     <string name="pin_mismatch">Os dois PINs não são iguais.</string>

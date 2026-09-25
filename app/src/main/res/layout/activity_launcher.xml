@@ -80,6 +80,16 @@
         android:padding="24dp"
         android:visibility="gone" />
 
+    <!-- Na tela de descanso: atalho para o responsável entrar (pede o PIN). -->
+    <Button
+        android:id="@+id/btnGuardianBlocked"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="@string/guardian_area_button"
+        android:visibility="gone" />
+
     <TextView
         android:id="@+id/emptyHint"
         android:layout_width="match_parent"

@@ -21,7 +21,7 @@ alter table public.commands add constraint commands_type_check
         'start_screen_view', 'start_checkin',
         'stop_screen_view', 'stop_checkin',
         'set_allowed_apps', 'install_app',
-        'set_time_rules'));
+        'set_time_rules', 'grant_time'));
 
 create table if not exists public.signals (
     id          bigint generated always as identity primary key,
