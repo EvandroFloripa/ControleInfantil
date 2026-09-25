@@ -13,7 +13,7 @@
     <string name="app_icon_desc">Ícone do aplicativo</string>
 
     <string name="setup_title">Configuração do responsável</string>
-    <string name="status_fmt">Device Admin: %1$s\nDevice Owner: %2$s</string>
+    <string name="status_fmt">Versão %3$s\nDevice Admin: %1$s\nDevice Owner: %2$s</string>
     <string name="device_id_fmt">ID do aparelho:\n%1$s</string>
     <string name="device_not_registered">Aparelho ainda não registrado no servidor.\nVerifique a conexão e os dados em SupabaseConfig.</string>
     <string name="enable_admin">Ativar proteção (Device Admin)</string>

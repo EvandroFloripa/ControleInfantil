@@ -104,7 +104,10 @@ class SetupActivity : GuardianActivity() {
         val admin = if (policy.isAdminActive) "✅ ativo" else "❌ inativo"
         val owner = if (policy.isDeviceOwner) "✅ ativo" else "❌ inativo (ver ADB)"
         findViewById<TextView>(R.id.status).text =
-            getString(R.string.status_fmt, admin, owner)
+            getString(
+                R.string.status_fmt, admin, owner,
+                com.controleinfantil.kids.BuildConfig.VERSION_NAME,
+            )
         findViewById<View>(R.id.btnReleaseDevice).visibility =
             if (policy.isDeviceOwner) View.VISIBLE else View.GONE
         // Botão de sobreposição só quando falta a permissão (e não é Device Owner).
