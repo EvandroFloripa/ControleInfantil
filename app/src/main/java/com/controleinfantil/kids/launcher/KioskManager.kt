@@ -189,6 +189,11 @@ class KioskManager(private val context: Context) {
     /** Entra no modo de tarefa fixada (kiosk real) — usado pelo launcher. */
     fun startLockTask(activity: Activity) {
         if (!isOwner) return
+        // Modo manutenção: não fixa (e sai do quiosque) enquanto o responsável liberou.
+        if (com.controleinfantil.kids.setup.GuardianArea.isPaused()) {
+            runCatching { activity.stopLockTask() }
+            return
+        }
         try {
             // Sempre reaplica antes de fixar: depois de um reboot, ou se o app nunca
             // passou pela tela de escolha, a lista estaria vazia e o quiosque viraria

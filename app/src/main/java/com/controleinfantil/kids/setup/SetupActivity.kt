@@ -48,6 +48,12 @@ class SetupActivity : GuardianActivity() {
             startActivity(Intent(this, ScheduleActivity::class.java))
         }
         findViewById<Button>(R.id.btnReleaseDevice).setOnClickListener { confirmReleaseDevice() }
+        findViewById<Button>(R.id.btnUnlockDevice).setOnClickListener { unlockForMaintenance() }
+        findViewById<Button>(R.id.btnRelock).setOnClickListener {
+            GuardianArea.resumeBlocking()
+            Toast.makeText(this, R.string.relock_toast, Toast.LENGTH_SHORT).show()
+            refreshStatus()
+        }
         findViewById<Button>(R.id.btnOverlay).setOnClickListener { requestOverlay() }
         findViewById<Button>(R.id.btnAccessibility).setOnClickListener {
             startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -82,6 +88,18 @@ class SetupActivity : GuardianActivity() {
             .show()
     }
 
+    /**
+     * Libera o aparelho por 15 min: sai do quiosque, pausa o bloqueio e abre as
+     * Configurações — para o responsável adicionar a conta Google, instalar, etc.
+     */
+    private fun unlockForMaintenance() {
+        GuardianArea.pauseBlocking(15 * 60_000L)
+        runCatching { stopLockTask() }
+        Toast.makeText(this, R.string.unlock_device_toast, Toast.LENGTH_LONG).show()
+        refreshStatus()
+        runCatching { startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
+    }
+
     private fun refreshStatus() {
         val admin = if (policy.isAdminActive) "✅ ativo" else "❌ inativo"
         val owner = if (policy.isDeviceOwner) "✅ ativo" else "❌ inativo (ver ADB)"
@@ -99,6 +117,8 @@ class SetupActivity : GuardianActivity() {
             com.controleinfantil.kids.block.AppBlockerService.isEnabled(this)
         findViewById<View>(R.id.btnAccessibility).visibility =
             if (blockOk) View.GONE else View.VISIBLE
+        findViewById<View>(R.id.btnRelock).visibility =
+            if (GuardianArea.isPaused()) View.VISIBLE else View.GONE
 
         val id = DeviceIdentity.id(this)
         findViewById<TextView>(R.id.deviceId).text =

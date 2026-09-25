@@ -42,6 +42,22 @@
             android:visibility="gone" />
 
         <Button
+            android:id="@+id/btnUnlockDevice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/unlock_device_button" />
+
+        <Button
+            android:id="@+id/btnRelock"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/relock_button"
+            android:visibility="gone" />
+
+        <Button
             android:id="@+id/btnAccessibility"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="match_parent"

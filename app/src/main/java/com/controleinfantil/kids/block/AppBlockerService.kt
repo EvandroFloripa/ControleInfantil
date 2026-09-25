@@ -38,6 +38,8 @@ class AppBlockerService : AccessibilityService() {
         // Responsável autenticado (PIN há pouco): libera tudo, inclusive as
         // Configurações e a instalação — o pai acessa o sistema, a criança não.
         if (GuardianArea.isUnlocked()) return false
+        // Modo manutenção: o responsável liberou o aparelho por um tempo.
+        if (GuardianArea.isPaused()) return false
         // Alguma tela do responsável está aberta (ex.: o diálogo do PIN): não bloqueia
         // nada, senão o teclado — que é outro pacote — seria expulso e fecharia o PIN.
         if (GuardianArea.inForeground) return false

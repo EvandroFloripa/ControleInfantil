@@ -164,4 +164,22 @@ object GuardianArea {
     fun lock() {
         unlockedAt = 0L
     }
+
+    // --- Modo manutenção: o responsável libera o aparelho por um tempo ----------
+    @Volatile
+    private var pausedUntil: Long = 0L
+
+    /** Libera o aparelho (sem quiosque nem bloqueio) por [ms]. */
+    fun pauseBlocking(ms: Long) {
+        pausedUntil = System.currentTimeMillis() + ms
+        markUnlocked()
+    }
+
+    /** True enquanto o aparelho está liberado pelo responsável. */
+    fun isPaused(): Boolean = System.currentTimeMillis() < pausedUntil
+
+    /** Religa o quiosque/bloqueio na hora. */
+    fun resumeBlocking() {
+        pausedUntil = 0L
+    }
 }
