@@ -230,6 +230,13 @@ class SupabaseClient(context: Context) {
         return deviceRpc("device_report_apps") { put("p_apps", arr) }.ok
     }
 
+    /** Envia ao painel os eventos de abertura de apps (histórico). */
+    fun reportAppEvents(events: org.json.JSONArray): Boolean {
+        if (!DeviceIdentity.isRegistered(appContext)) return false
+        if (events.length() == 0) return true
+        return deviceRpc("device_report_app_events") { put("p_events", events) }.ok
+    }
+
     /** Reporta ao painel as regras de tempo vigentes e o uso de hoje (em minutos). */
     fun reportStatus(status: JSONObject): Boolean {
         if (!DeviceIdentity.isRegistered(appContext)) return false

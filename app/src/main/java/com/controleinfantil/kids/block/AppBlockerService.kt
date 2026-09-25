@@ -27,7 +27,20 @@ class AppBlockerService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
-        if (shouldBlock(pkg)) goHome()
+        val blocked = shouldBlock(pkg)
+        logUsage(pkg, blocked)
+        if (blocked) goHome()
+    }
+
+    /** Registra no histórico a abertura de um app "de verdade" (não o sistema/nós). */
+    private fun logUsage(pkg: String, blocked: Boolean) {
+        if (pkg == packageName || pkg in essentials()) return
+        if (isInstaller(pkg)) return
+        val label = runCatching {
+            val info = packageManager.getApplicationInfo(pkg, 0)
+            packageManager.getApplicationLabel(info).toString()
+        }.getOrDefault(pkg)
+        UsageLog.record(this, pkg, label, blocked)
     }
 
     override fun onInterrupt() {}

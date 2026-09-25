@@ -224,6 +224,15 @@
     </div>
   </div>
 
+  <!-- Histórico de apps abertos -->
+  <div class="card hidden" id="usageCard">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Histórico de apps</h2>
+      <button class="secondary" id="btnLoadUsage">Atualizar</button>
+    </div>
+    <div id="usageList" class="apps-scroll muted" style="margin-top:8px">—</div>
+  </div>
+
   <!-- 7. Histórico -->
   <div class="card hidden" id="historyCard">
     <h2>Comandos recentes</h2>
@@ -521,7 +530,7 @@ function selectDevice(d) {
   state.selected = d.id;
   const isGuardian = state.roles[d.id] === 'guardian';
   $('selectedLabel').textContent = d.label;
-  ['commandsCard', 'appsCard', 'timeCard', 'locationCard', 'peopleCard', 'historyCard']
+  ['commandsCard', 'appsCard', 'timeCard', 'usageCard', 'locationCard', 'peopleCard', 'historyCard']
     .forEach(c => $(c).classList.remove('hidden'));
   document.querySelectorAll('[data-cmd]').forEach(b => { b.disabled = !isGuardian; });
   ['btnLoadApps', 'btnSaveApps', 'btnInstallApp', 'installInput',
@@ -537,6 +546,7 @@ function selectDevice(d) {
   loadPeople();
   loadApps();
   loadStatus(true);
+  loadUsage();
 }
 
 $('btnRefresh').onclick = loadDevices;
@@ -800,7 +810,7 @@ async function unlink(controllerId) {
     await rpc('controller_unlink', { p_device: state.selected, p_controller: controllerId });
     toast('Feito ✅');
     if (eu) { state.selected = null; loadDevices();
-      ['commandsCard','appsCard','timeCard','locationCard','peopleCard','historyCard']
+      ['commandsCard','appsCard','timeCard','usageCard','locationCard','peopleCard','historyCard']
         .forEach(c => $(c).classList.add('hidden')); }
     else loadPeople();
   } catch (e) { toast(e.message); }
@@ -821,6 +831,34 @@ $('btnInvite').onclick = async () => {
 };
 
 // --- 7. Histórico ---------------------------------------------------------
+async function loadUsage() {
+  if (!state.selected) return;
+  try {
+    const rows = await select(`app_events?device_id=eq.${state.selected}` +
+      `&order=at.desc&limit=200&select=label,package,blocked,at`);
+    const box = $('usageList');
+    if (!rows.length) {
+      box.classList.add('muted');
+      box.textContent = 'Sem registros ainda. Precisa do bloqueio de apps ' +
+        '(Acessibilidade) ligado no celular.';
+      return;
+    }
+    box.classList.remove('muted');
+    let lastDay = '';
+    box.innerHTML = rows.map(r => {
+      const d = new Date(r.at);
+      const day = d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+      const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const header = day !== lastDay ? `<div class="app-cat">${day}</div>` : '';
+      lastDay = day;
+      const tag = r.blocked
+        ? ' <span class="badge viewer">bloqueado</span>' : '';
+      return `${header}<div class="app-row"><span>${hora} — ${esc(r.label)}${tag}</span></div>`;
+    }).join('');
+  } catch (e) { toast(e.message); }
+}
+$('btnLoadUsage').onclick = loadUsage;
+
 async function loadHistory() {
   if (!state.selected) return;
   try {

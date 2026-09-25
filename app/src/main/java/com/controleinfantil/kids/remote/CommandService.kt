@@ -19,6 +19,7 @@ import com.controleinfantil.kids.launcher.LauncherActivity
 import com.controleinfantil.kids.launcher.launchablePackages
 import com.controleinfantil.kids.block.InstallAllow
 import com.controleinfantil.kids.block.SilentInstaller
+import com.controleinfantil.kids.block.UsageLog
 import com.controleinfantil.kids.block.Updater
 import com.controleinfantil.kids.lock.LockScreen
 import com.controleinfantil.kids.setup.GuardianPin
@@ -121,6 +122,7 @@ class CommandService : Service() {
                     client.heartbeat()
                     syncApps()
                     syncStatus()
+                    client.reportAppEvents(UsageLog.drain(this@CommandService))
                     maybeCheckUpdate()
                     client.fetchPendingCommands().forEach { execute(it) }
                 } else {
