@@ -38,6 +38,9 @@ class AppBlockerService : AccessibilityService() {
         // Responsável autenticado (PIN há pouco): libera tudo, inclusive as
         // Configurações e a instalação — o pai acessa o sistema, a criança não.
         if (GuardianArea.isUnlocked()) return false
+        // Alguma tela do responsável está aberta (ex.: o diálogo do PIN): não bloqueia
+        // nada, senão o teclado — que é outro pacote — seria expulso e fecharia o PIN.
+        if (GuardianArea.inForeground) return false
 
         // Instalar apps (Play e a tela "deseja instalar?") é sempre bloqueado, para a
         // criança não instalar por um link/APK. Só libera na janela em que o PAI manda
@@ -71,6 +74,12 @@ class AppBlockerService : AccessibilityService() {
         runCatching {
             getSystemService(TelecomManager::class.java)?.defaultDialerPackage
                 ?.let { set.add(it) }
+        }
+        // O teclado (IME) atual nunca pode ser bloqueado, senão nenhum campo de texto
+        // (PIN, busca, login) funciona — a tela fecharia ao abrir o teclado.
+        runCatching {
+            Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
+                ?.substringBefore('/')?.takeIf { it.isNotBlank() }?.let { set.add(it) }
         }
         return set
     }

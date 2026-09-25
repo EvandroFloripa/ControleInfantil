@@ -19,6 +19,7 @@ import com.controleinfantil.kids.launcher.LauncherActivity
 import com.controleinfantil.kids.launcher.launchablePackages
 import com.controleinfantil.kids.block.InstallAllow
 import com.controleinfantil.kids.block.SilentInstaller
+import com.controleinfantil.kids.block.Updater
 import com.controleinfantil.kids.lock.LockScreen
 import com.controleinfantil.kids.setup.GuardianPin
 import com.controleinfantil.kids.location.LocationReporter
@@ -52,6 +53,7 @@ class CommandService : Service() {
     private lateinit var location: LocationReporter
     private var lastAppsSig: String? = null
     private var lastStatusSig: String? = null
+    private var lastUpdateCheck = 0L
 
     /**
      * Quando um app termina de instalar (ou é removido), volta para o launcher — assim
@@ -117,6 +119,7 @@ class CommandService : Service() {
                     client.heartbeat()
                     syncApps()
                     syncStatus()
+                    maybeCheckUpdate()
                     client.fetchPendingCommands().forEach { execute(it) }
                 } else {
                     Log.w(TAG, "Aparelho ainda não registrado (verifique SupabaseConfig)")
@@ -190,6 +193,14 @@ class CommandService : Service() {
             .put("limit", rules.dailyLimitMinutes)
             .put("used", used)
         if (client.reportStatus(json)) lastStatusSig = sig
+    }
+
+    /** Checa atualização (Device Owner) no máximo a cada 6 horas. */
+    private fun maybeCheckUpdate() {
+        val now = System.currentTimeMillis()
+        if (now - lastUpdateCheck < 6 * 60 * 60_000L) return
+        lastUpdateCheck = now
+        Updater.checkAndUpdate(this)
     }
 
     private suspend fun execute(cmd: Command) {
