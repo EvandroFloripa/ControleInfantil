@@ -76,6 +76,15 @@
   #viewerModal:not(.hidden) { display: flex; }
   .app-cat { font-weight:600; color:#00695C; margin:14px 0 4px; font-size:13px;
              text-transform:uppercase; letter-spacing:.03em; }
+  .cat-node { border-bottom:1px solid #eee; }
+  .cat-node > summary { list-style:none; display:flex; align-items:center; gap:10px;
+             padding:10px 4px; cursor:pointer; font-weight:600; color:#00695C;
+             font-size:14px; user-select:none; }
+  .cat-node > summary::-webkit-details-marker { display:none; }
+  .cat-node > summary .arrow { display:inline-block; width:12px; transition:transform .15s; }
+  .cat-node[open] > summary .arrow { transform:rotate(90deg); }
+  .cat-node > summary .cat-count { margin-left:auto; font-weight:400; color:#666; font-size:12px; }
+  .cat-node .app-row { padding-left:26px; }
   .app-row { display:flex; justify-content:space-between; align-items:center;
              padding:8px 4px; border-bottom:1px solid #f0f0f0; cursor:pointer; }
   .app-row span { flex:1; min-width:0; margin-right:12px; line-height:1.3; overflow-wrap:anywhere; }
@@ -593,6 +602,7 @@ async function sendCommand(type) {
 // --- 4b. Aplicativos ------------------------------------------------------
 let deviceApps = [];
 let allowedSet = new Set();
+const openCats = new Set();   // categorias que o responsável deixou abertas
 const CAT_LABELS = {
   game: 'Jogos', video: 'Vídeo', audio: 'Áudio', image: 'Imagens', social: 'Social',
   news: 'Notícias', maps: 'Mapas', productivity: 'Produtividade', other: 'Outros'
@@ -637,18 +647,63 @@ function renderApps() {
   filtered.forEach(a => { (groups[a.category || 'other'] = groups[a.category || 'other'] || []).push(a); });
   const cats = Object.keys(groups).sort((x, y) => CAT_ORDER.indexOf(x) - CAT_ORDER.indexOf(y));
 
+  // Com busca, abre todas as categorias; sem busca, lembra quais o pai abriu.
+  const searching = !!q;
   box.innerHTML = cats.length ? cats.map(cat => {
-    const rows = groups[cat].map(a =>
+    const apps = groups[cat];
+    const rows = apps.map(a =>
       `<label class="app-row"><span>${esc(a.label)}</span>
          <input type="checkbox" data-pkg="${esc(a.package)}" ${allowedSet.has(a.package) ? 'checked' : ''}></label>`
     ).join('');
-    return `<div class="app-cat">${CAT_LABELS[cat] || cat} <span class="muted">(${groups[cat].length})</span></div>${rows}`;
+    const open = searching || openCats.has(cat) || cats.length === 1;
+    return `<details class="cat-node" data-cat="${cat}" ${open ? 'open' : ''}>
+        <summary><span class="arrow">▶</span>
+          <input type="checkbox" data-cat-toggle="${cat}" title="Marcar/desmarcar todos">
+          <span>${CAT_LABELS[cat] || cat}</span>
+          <span class="cat-count" data-cat-count="${cat}"></span></summary>
+        ${rows}</details>`;
   }).join('') : '<p class="muted" style="padding:12px 0">Nenhum app encontrado.</p>';
+
+  // Estado da caixa da categoria: marcada / desmarcada / parcial.
+  const syncCat = cat => {
+    const pkgs = groups[cat].map(a => a.package);
+    const on = pkgs.filter(p => allowedSet.has(p)).length;
+    const cb = box.querySelector(`[data-cat-toggle="${cat}"]`);
+    cb.checked = on === pkgs.length;
+    cb.indeterminate = on > 0 && on < pkgs.length;
+    box.querySelector(`[data-cat-count="${cat}"]`).textContent = `${on} de ${pkgs.length} liberados`;
+  };
+  cats.forEach(syncCat);
+
+  box.querySelectorAll('details.cat-node').forEach(d => {
+    d.ontoggle = () => {
+      if (searching) return;
+      const cat = d.getAttribute('data-cat');
+      if (d.open) openCats.add(cat); else openCats.delete(cat);
+    };
+  });
+
+  box.querySelectorAll('[data-cat-toggle]').forEach(cb => {
+    // Clicar na caixa não deve abrir/fechar a categoria.
+    cb.onclick = e => e.stopPropagation();
+    cb.onchange = () => {
+      const cat = cb.getAttribute('data-cat-toggle');
+      groups[cat].forEach(a => {
+        if (cb.checked) allowedSet.add(a.package); else allowedSet.delete(a.package);
+      });
+      box.querySelectorAll(`details[data-cat="${cat}"] [data-pkg]`)
+        .forEach(x => { x.checked = cb.checked; });
+      syncCat(cat);
+      updateAppsCount();
+    };
+  });
 
   box.querySelectorAll('[data-pkg]').forEach(cb => {
     cb.onchange = () => {
       const pkg = cb.getAttribute('data-pkg');
       if (cb.checked) allowedSet.add(pkg); else allowedSet.delete(pkg);
+      const cat = cb.closest('details').getAttribute('data-cat');
+      syncCat(cat);
       updateAppsCount();
     };
   });
