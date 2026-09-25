@@ -67,6 +67,23 @@ revoke execute on function public.device_report_apps(uuid, text, jsonb)
 grant execute on function public.device_report_apps(uuid, text, jsonb)
     to anon, authenticated;
 
+-- O aparelho informa o próprio nome (modelo). Só troca enquanto o nome ainda é o
+-- padrão — nunca sobrescreve um nome que o responsável tenha definido no painel.
+create or replace function public.device_set_label(
+    p_device uuid, p_token text, p_label text)
+returns void language plpgsql volatile security definer set search_path = '' as $$
+begin
+    perform private.assert_device(p_device, p_token);
+    update public.devices
+        set label = coalesce(nullif(left(trim(p_label), 60), ''), label)
+        where id = p_device and label = 'Celular da criança';
+end $$;
+
+revoke execute on function public.device_set_label(uuid, text, text)
+    from anon, authenticated, public;
+grant execute on function public.device_set_label(uuid, text, text)
+    to anon, authenticated;
+
 -- ---------------------------------------------------------------------------
 --  Lado do CONTROLADOR: só guardião do aparelho lê a lista (RLS).
 -- ---------------------------------------------------------------------------

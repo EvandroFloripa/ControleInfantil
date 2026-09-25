@@ -54,6 +54,7 @@ class CommandService : Service() {
     private var lastAppsSig: String? = null
     private var lastStatusSig: String? = null
     private var lastUpdateCheck = 0L
+    private var labelSynced = false
 
     /**
      * Quando um app termina de instalar (ou é removido), volta para o launcher — assim
@@ -116,6 +117,7 @@ class CommandService : Service() {
                 lastTick = now
 
                 if (client.ensureRegistered()) {
+                    if (!labelSynced) labelSynced = client.setDeviceLabel(DeviceIdentity.label(this@CommandService))
                     client.heartbeat()
                     syncApps()
                     syncStatus()

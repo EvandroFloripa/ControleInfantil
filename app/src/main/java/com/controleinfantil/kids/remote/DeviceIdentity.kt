@@ -46,7 +46,16 @@ object DeviceIdentity {
     }
 
     fun label(context: Context): String =
-        prefs(context).getString(KEY_LABEL, null) ?: "Celular da criança"
+        prefs(context).getString(KEY_LABEL, null) ?: defaultLabel()
+
+    /** Sem nome definido, usa o modelo do aparelho para dar para diferenciar. */
+    private fun defaultLabel(): String {
+        val model = listOf(android.os.Build.MANUFACTURER, android.os.Build.MODEL)
+            .filter { !it.isNullOrBlank() }
+            .joinToString(" ") { it.trim() }
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        return model.ifBlank { "Celular da criança" }.take(60)
+    }
 
     fun setLabel(context: Context, label: String) {
         prefs(context).edit().putString(KEY_LABEL, label).apply()

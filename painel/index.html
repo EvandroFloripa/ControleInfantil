@@ -574,9 +574,14 @@ const CAT_ORDER = ['game', 'video', 'audio', 'image', 'social', 'news', 'maps', 
 
 async function loadApps() {
   if (!state.selected) return;
+  const base = `device_apps?device_id=eq.${state.selected}&order=label.asc`;
   try {
-    deviceApps = await select(`device_apps?device_id=eq.${state.selected}` +
-      `&order=label.asc&select=package,label,allowed,category`);
+    try {
+      deviceApps = await select(`${base}&select=package,label,allowed,category`);
+    } catch (e) {
+      // Banco com apps.sql antigo (sem a coluna category): busca sem ela.
+      deviceApps = await select(`${base}&select=package,label,allowed`);
+    }
     allowedSet = new Set(deviceApps.filter(a => a.allowed).map(a => a.package));
     renderApps();
   } catch (e) { toast(e.message); }

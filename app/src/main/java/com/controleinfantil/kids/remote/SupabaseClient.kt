@@ -208,6 +208,12 @@ class SupabaseClient(context: Context) {
         val allowed: Boolean,
     )
 
+    /** Informa o nome (modelo) do aparelho; o servidor só troca se ainda for o padrão. */
+    fun setDeviceLabel(label: String): Boolean {
+        if (!DeviceIdentity.isRegistered(appContext)) return false
+        return deviceRpc("device_set_label") { put("p_label", label) }.ok
+    }
+
     /** Reporta ao backend os apps abríveis do aparelho e se cada um está liberado. */
     fun reportApps(apps: List<ReportedApp>): Boolean {
         if (!DeviceIdentity.isRegistered(appContext)) return false
