@@ -77,7 +77,24 @@
   .toast.show { opacity: 1; }
   .hidden { display: none; }
   /* display:flex fica aqui, e não no style do elemento: lá venceria o .hidden. */
-  #viewerModal:not(.hidden) { display: flex; }
+  /* Janela flutuante do visualizador: deixa o painel livre por trás. */
+  #viewerModal { position:fixed; right:16px; bottom:16px; width:360px;
+    max-width:calc(100vw - 32px); background:#000; border-radius:12px; overflow:hidden;
+    z-index:60; box-shadow:0 8px 30px rgba(0,0,0,.5); flex-direction:column; }
+  #viewerModal:not(.hidden) { display:flex; }
+  #viewerHeader { display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:8px 10px; background:#111; color:#fff; cursor:move; user-select:none; }
+  #viewerHeader #viewerTitle { font-size:13px; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; }
+  .viewer-actions { display:flex; gap:4px; flex:none; }
+  .viewer-actions button { background:#333; color:#fff; border:none; border-radius:6px;
+    width:30px; height:30px; cursor:pointer; font-size:14px; line-height:1; }
+  .viewer-actions #viewerClose { background:#b00020; }
+  #viewerVideo { width:100%; height:200px; background:#000; object-fit:contain; display:block; }
+  .viewer-note { color:#aaa; font-size:11px; text-align:center; padding:6px 8px; margin:0; }
+  #viewerModal.maximized { inset:0; right:0; bottom:0; width:auto; border-radius:0; }
+  #viewerModal.maximized #viewerVideo { height:calc(100vh - 46px); }
+  #viewerModal.minimized #viewerBody { display:none; }
   .app-cat { font-weight:600; color:#00695C; margin:14px 0 4px; font-size:13px;
              text-transform:uppercase; letter-spacing:.03em; }
   .cat-node { border-bottom:1px solid #eee; }
@@ -273,19 +290,20 @@
 </main>
 
 <!-- Visualizador de vídeo/tela (WebRTC) -->
-<div id="viewerModal" class="hidden" style="position:fixed;inset:0;background:#000;
-     z-index:50;flex-direction:column">
-  <div style="display:flex;justify-content:space-between;align-items:center;
-       padding:12px 16px;color:#fff;background:#111">
+<div id="viewerModal" class="hidden">
+  <div id="viewerHeader">
     <span id="viewerTitle">Conectando…</span>
-    <button id="viewerClose" class="danger">Encerrar</button>
+    <div class="viewer-actions">
+      <button id="viewerMin" title="Minimizar">–</button>
+      <button id="viewerMax" title="Maximizar">▢</button>
+      <button id="viewerClose" title="Encerrar">✕</button>
+    </div>
   </div>
-  <video id="viewerVideo" autoplay playsinline
-         style="flex:1;width:100%;background:#000;object-fit:contain"></video>
-  <p class="muted" style="color:#aaa;text-align:center;padding:8px">
-    O aparelho da criança mostra uma notificação e a bolinha do Android enquanto isto
-    está ativo.
-  </p>
+  <div id="viewerBody">
+    <video id="viewerVideo" autoplay playsinline></video>
+    <p class="viewer-note">O aparelho da criança mostra uma notificação e a bolinha do
+      Android enquanto isto está ativo.</p>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1037,7 +1055,9 @@ async function startViewer(type) {
   viewer.lastId = 0;
   $('viewerTitle').textContent =
     type === 'start_checkin' ? 'Check-in de vídeo/áudio' : 'Tela da criança';
-  $('viewerModal').classList.remove('hidden');
+  const vm = $('viewerModal');
+  vm.classList.remove('hidden', 'maximized', 'minimized');
+  vm.style.left = ''; vm.style.top = ''; vm.style.right = '16px'; vm.style.bottom = '16px';
 
   const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   viewer.pc = pc;
@@ -1127,6 +1147,48 @@ function stopViewer(sendStop = true) {
 }
 
 $('viewerClose').onclick = () => stopViewer(true);
+
+// Minimizar / maximizar a janela flutuante.
+$('viewerMin').onclick = () => $('viewerModal').classList.toggle('minimized');
+$('viewerMax').onclick = () => {
+  const m = $('viewerModal');
+  m.classList.remove('minimized');
+  m.classList.toggle('maximized');
+  // Ao sair do modo tela cheia, volta para o canto (limpa posição arrastada).
+  if (!m.classList.contains('maximized')) {
+    m.style.left = ''; m.style.top = '';
+    m.style.right = '16px'; m.style.bottom = '16px';
+  }
+};
+
+// Arrastar pela barra de título.
+(function makeViewerDraggable() {
+  const m = $('viewerModal'), h = $('viewerHeader');
+  let dragging = false, dx = 0, dy = 0;
+  const onMove = e => {
+    if (!dragging) return;
+    const p = e.touches ? e.touches[0] : e;
+    m.style.left = (p.clientX - dx) + 'px';
+    m.style.top = (p.clientY - dy) + 'px';
+    m.style.right = 'auto'; m.style.bottom = 'auto';
+  };
+  const start = e => {
+    if (m.classList.contains('maximized')) return;
+    if (e.target.closest('.viewer-actions')) return;   // não arrasta ao clicar nos botões
+    dragging = true;
+    const p = e.touches ? e.touches[0] : e;
+    const r = m.getBoundingClientRect();
+    dx = p.clientX - r.left; dy = p.clientY - r.top;
+    e.preventDefault();
+  };
+  const end = () => { dragging = false; };
+  h.addEventListener('mousedown', start);
+  h.addEventListener('touchstart', start, { passive: false });
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('mouseup', end);
+  window.addEventListener('touchend', end);
+})();
 
 /**
  * Volta do link do e-mail (confirmação de cadastro): o Supabase entrega a sessão no
