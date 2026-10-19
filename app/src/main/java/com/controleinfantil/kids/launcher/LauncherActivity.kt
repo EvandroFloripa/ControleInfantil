@@ -41,6 +41,7 @@ class LauncherActivity : AppCompatActivity() {
     private lateinit var kiosk: KioskManager
     private lateinit var recycler: RecyclerView
     private var showingBlocked = false
+    private var showingFree = false
     private var askedForHome = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,7 +83,9 @@ class LauncherActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 while (isActive) {
                     delay(RULES_RECHECK_MS)
-                    if (checkRules(this@LauncherActivity).blocked != showingBlocked) refreshApps()
+                    if (currentVerdict().blocked != showingBlocked ||
+                        GuardianArea.isPaused() != showingFree
+                    ) refreshApps()
                 }
             }
         }
@@ -131,8 +134,14 @@ class LauncherActivity : AppCompatActivity() {
 
     private fun refreshApps() {
         // Fora do horário, nem carrega a lista: a criança vê o aviso de descanso.
-        val verdict = checkRules(this)
+        val verdict = currentVerdict()
         showingBlocked = verdict.blocked
+        // Responsável liberou o aparelho (manutenção ou controle desativado):
+        // mostra todos os apps, não só os liberados.
+        val free = GuardianArea.isPaused()
+        showingFree = free
+        findViewById<View>(R.id.disabledHint).visibility =
+            if (GuardianArea.isControlDisabled()) View.VISIBLE else View.GONE
         val blockedView = findViewById<TextView>(R.id.blockedHint)
         val emptyView = findViewById<TextView>(R.id.emptyHint)
         val guardianBtn = findViewById<View>(R.id.btnGuardianBlocked)
@@ -151,7 +160,7 @@ class LauncherActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val allowed = kiosk.allowedPackages
             val apps = withContext(Dispatchers.IO) {
-                launchableApps().filter { it.packageName in allowed }
+                launchableApps().filter { free || it.packageName in allowed }
             }
             emptyView.visibility = if (apps.isEmpty()) View.VISIBLE else View.GONE
             recycler.adapter = AppsAdapter(apps) { pkg ->
@@ -159,6 +168,10 @@ class LauncherActivity : AppCompatActivity() {
             }
         }
     }
+
+    /** Com o aparelho liberado pelo responsável, o limite de horário não vale. */
+    private fun currentVerdict(): Verdict =
+        if (GuardianArea.isPaused()) Verdict.Allowed else checkRules(this)
 
     private fun blockedMessage(verdict: Verdict): String = when (verdict) {
         is Verdict.OutsideWindow ->

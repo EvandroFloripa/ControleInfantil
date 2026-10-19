@@ -1,6 +1,7 @@
 package com.controleinfantil.kids.setup
 
 import android.app.AlertDialog
+import android.content.Context
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
@@ -175,11 +176,39 @@ object GuardianArea {
         markUnlocked()
     }
 
-    /** True enquanto o aparelho está liberado pelo responsável. */
-    fun isPaused(): Boolean = System.currentTimeMillis() < pausedUntil
+    /**
+     * True enquanto o aparelho está liberado pelo responsável: pelos 15 min de
+     * manutenção ou com o controle desativado.
+     */
+    fun isPaused(): Boolean = disabled || System.currentTimeMillis() < pausedUntil
 
-    /** Religa o quiosque/bloqueio na hora. */
-    fun resumeBlocking() {
+    /** Religa o quiosque/bloqueio na hora (encerra também o controle desativado). */
+    fun resumeBlocking(context: Context) {
         pausedUntil = 0L
+        setControlDisabled(context, false)
     }
+
+    // --- Controle desativado: tudo liberado até o responsável reativar ----------
+    // Diferente da manutenção, fica gravado: sobrevive ao app ser fechado e ao
+    // aparelho reiniciar. Device Owner e as travas contra desinstalar continuam.
+    private const val PREFS = "guardian_area"
+    private const val KEY_DISABLED = "control_disabled"
+
+    @Volatile
+    private var disabled: Boolean = false
+
+    /** Carrega o estado gravado. O [com.controleinfantil.kids.App] chama ao iniciar. */
+    fun init(context: Context) {
+        disabled = prefs(context).getBoolean(KEY_DISABLED, false)
+    }
+
+    fun isControlDisabled(): Boolean = disabled
+
+    fun setControlDisabled(context: Context, value: Boolean) {
+        disabled = value
+        prefs(context).edit().putBoolean(KEY_DISABLED, value).apply()
+    }
+
+    private fun prefs(context: Context) =
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 }

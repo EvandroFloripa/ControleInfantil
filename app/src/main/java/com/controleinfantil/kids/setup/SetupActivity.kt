@@ -49,8 +49,9 @@ class SetupActivity : GuardianActivity() {
         }
         findViewById<Button>(R.id.btnReleaseDevice).setOnClickListener { confirmReleaseDevice() }
         findViewById<Button>(R.id.btnUnlockDevice).setOnClickListener { unlockForMaintenance() }
+        findViewById<Button>(R.id.btnDisableControl).setOnClickListener { confirmDisableControl() }
         findViewById<Button>(R.id.btnRelock).setOnClickListener {
-            GuardianArea.resumeBlocking()
+            GuardianArea.resumeBlocking(this)
             Toast.makeText(this, R.string.relock_toast, Toast.LENGTH_SHORT).show()
             refreshStatus()
         }
@@ -89,6 +90,25 @@ class SetupActivity : GuardianActivity() {
     }
 
     /**
+     * Desativa o controle até o responsável reativar: sai do quiosque e libera todos
+     * os apps, as Configurações e a instalação, sem limite de horário. Diferente de
+     * "Remover o controle", continua Device Owner e protegido contra desinstalação.
+     */
+    private fun confirmDisableControl() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.disable_control_title)
+            .setMessage(R.string.disable_control_message)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.disable_control_confirm) { _, _ ->
+                GuardianArea.setControlDisabled(this, true)
+                runCatching { stopLockTask() }
+                Toast.makeText(this, R.string.disable_control_toast, Toast.LENGTH_LONG).show()
+                refreshStatus()
+            }
+            .show()
+    }
+
+    /**
      * Libera o aparelho por 15 min: sai do quiosque, pausa o bloqueio e abre as
      * Configurações — para o responsável adicionar a conta Google, instalar, etc.
      */
@@ -105,11 +125,14 @@ class SetupActivity : GuardianActivity() {
     private fun refreshStatus() {
         val admin = if (policy.isAdminActive) "✅ ativo" else "❌ inativo"
         val owner = if (policy.isDeviceOwner) "✅ ativo" else "❌ inativo (ver ADB)"
+        val disabled = GuardianArea.isControlDisabled()
+        val status = getString(
+            R.string.status_fmt, admin, owner,
+            com.controleinfantil.kids.BuildConfig.VERSION_NAME,
+        )
         findViewById<TextView>(R.id.status).text =
-            getString(
-                R.string.status_fmt, admin, owner,
-                com.controleinfantil.kids.BuildConfig.VERSION_NAME,
-            )
+            if (disabled) getString(R.string.control_disabled_status) + "\n\n" + status
+            else status
         findViewById<View>(R.id.btnReleaseDevice).visibility =
             if (policy.isDeviceOwner) View.VISIBLE else View.GONE
         // Botão de sobreposição só quando falta a permissão (e não é Device Owner).
@@ -124,6 +147,13 @@ class SetupActivity : GuardianActivity() {
             if (blockOk) View.GONE else View.VISIBLE
         findViewById<View>(R.id.btnRelock).visibility =
             if (GuardianArea.isPaused()) View.VISIBLE else View.GONE
+        findViewById<Button>(R.id.btnRelock).setText(
+            if (disabled) R.string.enable_control_button else R.string.relock_button
+        )
+        findViewById<View>(R.id.btnUnlockDevice).visibility =
+            if (disabled) View.GONE else View.VISIBLE
+        findViewById<View>(R.id.btnDisableControl).visibility =
+            if (disabled) View.GONE else View.VISIBLE
 
         val id = DeviceIdentity.id(this)
         findViewById<TextView>(R.id.deviceId).text =

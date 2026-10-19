@@ -71,6 +71,14 @@
     <string name="unlock_device_toast">Aparelho liberado por 15 min. Abra Configurações e faça o que precisar; o bloqueio volta sozinho.</string>
     <string name="relock_button">Reativar o bloqueio agora</string>
     <string name="relock_toast">Bloqueio reativado.</string>
+    <string name="disable_control_button">Desativar o controle (até reativar)</string>
+    <string name="disable_control_title">Desativar o controle?</string>
+    <string name="disable_control_message">O aparelho fica totalmente liberado — todos os apps, Configurações, Play Store e sem limite de horário — até você reativar aqui, mesmo depois de reiniciar.\n\nO Controle Infantil continua instalado e protegido: o painel segue funcionando e, para reativar, basta voltar nesta tela com o PIN.</string>
+    <string name="disable_control_confirm">Desativar</string>
+    <string name="disable_control_toast">Controle desativado. Para reativar, toque e segure no relógio e digite o PIN.</string>
+    <string name="enable_control_button">Reativar o controle</string>
+    <string name="control_disabled_status">⚠️ Controle DESATIVADO — o aparelho está totalmente liberado.</string>
+    <string name="launcher_control_disabled">Controle desativado — todos os apps liberados</string>
     <string name="guardian_area_button">Área do responsável</string>
     <string name="pin_confirm_hint">Repita o PIN</string>
     <string name="pin_too_short">O PIN precisa ter pelo menos %1$d números.</string>
