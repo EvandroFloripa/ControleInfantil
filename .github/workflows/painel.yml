@@ -58,9 +58,8 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           local-dir: ./painel/
-          # O subdomínio painelpais.ea-systems.dev.br usa esta pasta como
-          # document root dentro da hospedagem do domínio principal.
-          server-dir: /public_html/painelpais/
+          # Document root informado pela Hostinger para o subdomínio.
+          server-dir: /home/u425377146/domains/ea-systems.dev.br/painelpais/
 
       - name: Conferir o site
         run: |
