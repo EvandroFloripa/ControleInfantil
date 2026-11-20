@@ -37,7 +37,7 @@ jobs:
             echo "::error::Faltam FTP_USERNAME ou FTP_PASSWORD."
             exit 1
           fi
-          host=ftp.ea-systems.dev.br
+          host=151.106.97.46
           echo "::add-mask::$host"
           echo "FTP_SERVER: nome (${#host} caracteres); resolve? $(getent hosts "$host" >/dev/null && echo sim || echo NAO)"
           echo "FTP_HOST=$host" >> "$GITHUB_ENV"
