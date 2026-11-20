@@ -5,7 +5,6 @@
 # .ftp-deploy-sync-state.json).
 #
 # Secrets (Settings -> Secrets and variables -> Actions):
-#   FTP_SERVER    host do FTP da Hostinger (hPanel -> Contas FTP)
 #   FTP_USERNAME  conta FTP com acesso à hospedagem de ea-systems.dev.br
 #   FTP_PASSWORD  senha dessa conta
 name: Painel
@@ -31,23 +30,16 @@ jobs:
 
       - name: Conferir secrets
         env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then
-            echo "::error::Faltam FTP_SERVER, FTP_USERNAME ou FTP_PASSWORD."
+          if [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then
+            echo "::error::Faltam FTP_USERNAME ou FTP_PASSWORD."
             exit 1
           fi
-          # Aceita o host como o hPanel mostra ("ftp://1.2.3.4", com porta ou
-          # espaços): a action quer só o nome/IP.
-          host=$(printf '%s' "$FTP_SERVER" | tr -d '[:space:]' | sed -E 's#^[a-z]+://##; s#/.*$##; s#:[0-9]+$##')
+          host=ftp.ea-systems.dev.br
           echo "::add-mask::$host"
-          if printf '%s' "$host" | grep -Eq '^[0-9]{1,3}(\.[0-9]{1,3}){3}$'; then
-            echo "FTP_SERVER: IP (${#host} caracteres)"
-          else
-            echo "FTP_SERVER: nome (${#host} caracteres); resolve? $(getent hosts "$host" >/dev/null && echo sim || echo NAO)"
-          fi
+          echo "FTP_SERVER: nome (${#host} caracteres); resolve? $(getent hosts "$host" >/dev/null && echo sim || echo NAO)"
           echo "FTP_HOST=$host" >> "$GITHUB_ENV"
 
       - name: Enviar para a Hostinger
