@@ -6,7 +6,7 @@
 #
 # Secrets (Settings -> Secrets and variables -> Actions):
 #   FTP_SERVER    host do FTP da Hostinger (hPanel -> Contas FTP)
-#   FTP_USERNAME  conta FTP restrita a public_html/painelpais
+#   FTP_USERNAME  conta FTP com acesso à hospedagem de ea-systems.dev.br
 #   FTP_PASSWORD  senha dessa conta
 name: Painel
 
@@ -58,8 +58,9 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           local-dir: ./painel/
-          # A conta FTP já começa em public_html/painelpais.
-          server-dir: ./
+          # O subdomínio painelpais.ea-systems.dev.br usa esta pasta como
+          # document root dentro da hospedagem do domínio principal.
+          server-dir: /public_html/painelpais/
 
       - name: Conferir o site
         run: |
