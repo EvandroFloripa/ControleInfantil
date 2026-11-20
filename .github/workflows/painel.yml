@@ -48,7 +48,8 @@ jobs:
           server: ${{ env.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
+          protocol: ftp
+          port: 21
           local-dir: ./painel/
           # Document root informado pela Hostinger para o subdomínio.
           server-dir: /home/u425377146/domains/ea-systems.dev.br/painelpais/
