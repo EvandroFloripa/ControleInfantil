@@ -6,62 +6,86 @@
 <title>Controle Infantil — Painel</title>
 <style>
   :root {
-    --primary: #00695c; --primary-dark: #004d40; --bg: #f4f6f8;
-    --card: #fff; --text: #263238; --muted: #607d8b; --danger: #c62828;
-    --border: #e0e0e0;
+    --bg: #eef3f7; --surface: #fff; --surface-soft: #f6f9fb;
+    --ink: #142538; --muted: #667789; --border: #dce5ec;
+    --primary: #0a7c76; --primary-dark: #075a58; --accent: #42c8b5;
+    --success: #13796f; --warning: #a8610f; --danger: #b83f50; --focus: #63e0cf;
+    --shadow: 0 18px 48px rgba(25, 50, 70, .10);
+    --radius: 18px; --radius-sm: 11px;
   }
   * { box-sizing: border-box; }
+  html { background: var(--bg); }
   body {
-    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg); color: var(--text);
+    margin: 0; min-height: 100vh; overflow-x: hidden;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: radial-gradient(circle at 85% -10%, rgba(66, 200, 181, .16), transparent 32%), var(--bg);
+    color: var(--ink);
   }
+  button, input, select { font: inherit; }
+  button:focus-visible, input:focus-visible, select:focus-visible,
+  .device:focus-visible, summary:focus-visible, a:focus-visible {
+    outline: 3px solid var(--focus); outline-offset: 2px;
+  }
+  .skip-link {
+    position: fixed; top: 10px; left: 10px; z-index: 100; transform: translateY(-160%);
+    background: #fff; color: var(--ink); padding: 10px 14px; border-radius: var(--radius-sm);
+    box-shadow: var(--shadow); font-weight: 750;
+  }
+  .skip-link:focus { transform: translateY(0); }
   header {
-    background: var(--primary); color: #fff; padding: 16px 20px;
+    min-height: 76px; background: #122c40; color: #fff; padding: 16px 32px;
     display: flex; align-items: center; gap: 10px; justify-content: space-between;
+    position: sticky; top: 0; z-index: 20; box-shadow: 0 5px 20px rgba(16, 38, 56, .12);
   }
-  header h1 { font-size: 17px; margin: 0; }
-  header button { background: rgba(255,255,255,.2); padding: 6px 10px; font-size: 13px; }
-  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+  header h1 { font-size: 18px; margin: 0; letter-spacing: -.02em; }
+  header button { background: rgba(255,255,255,.13); padding: 8px 14px; font-size: 13px; }
+  .app-shell { display: grid; grid-template-columns: 238px minmax(0, 1fr); min-height: calc(100vh - 76px); }
+  .sidebar { background: #17384d; padding: 28px 16px; }
+  .sidebar::before { content: 'PAINEL DO RESPONSÁVEL'; display: block; color: #91b1c2; font-size: 10px; font-weight: 800; letter-spacing: .14em; padding: 0 14px 16px; }
+  .dashboard-content { width: min(1180px, 100%); margin: 0 auto; padding: 34px clamp(20px, 4vw, 52px) 60px; }
+  main { max-width: none; margin: 0; padding: 0; }
   .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-    padding: 16px; margin-bottom: 16px;
+    background: var(--surface); border: 1px solid rgba(220, 229, 236, .9); border-radius: var(--radius);
+    padding: clamp(18px, 2.5vw, 28px); margin-bottom: 20px; box-shadow: var(--shadow);
   }
-  .tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
-  .tabs button { background:var(--card); border:1px solid var(--border); border-radius:999px;
-    padding:8px 14px; cursor:pointer; font-size:14px; color:var(--fg); }
-  .tabs button.active { background:#00695C; color:#fff; border-color:#00695C; }
+  .tabs { display:flex; flex-direction:column; gap:5px; margin:0; }
+  .tabs button { background:transparent; border:1px solid transparent; border-radius:var(--radius-sm);
+    padding:12px 14px; cursor:pointer; font-size:13px; color:#c1d4de; text-align:left; transition: .2s ease; }
+  .tabs button:hover { background: rgba(255,255,255,.08); color:#fff; }
+  .tabs button.active { background: linear-gradient(100deg, var(--accent), #2aa89f); color:#103b42; border-color:transparent; box-shadow: 0 7px 18px rgba(66,200,181,.18); }
   .card h2 {
-    font-size: 13px; margin: 0 0 12px; color: var(--muted);
+    font-size: 11px; margin: 0 0 16px; color: var(--muted);
     text-transform: uppercase; letter-spacing: .5px;
   }
   label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
   input, select {
-    width: 100%; padding: 10px; border: 1px solid var(--border);
-    border-radius: 8px; font-size: 14px;
+    width: 100%; padding: 12px 13px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 14px; background: var(--surface-soft); color: var(--ink);
   }
   button {
-    border: none; border-radius: 8px; padding: 12px 14px; font-size: 14px;
-    font-weight: 600; cursor: pointer; color: #fff; background: var(--primary);
+    border: none; border-radius: var(--radius-sm); padding: 12px 15px; font-size: 13px;
+    font-weight: 750; cursor: pointer; color: #fff; background: var(--primary); transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
   }
-  button:active { background: var(--primary-dark); }
-  button:disabled { opacity: .5; cursor: default; }
-  button.secondary { background: #455a64; }
+  button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 7px 16px rgba(10, 124, 118, .18); }
+  button:active { background: var(--primary-dark); transform: translateY(0); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.secondary { background: #365366; }
   button.danger { background: var(--danger); }
   button.link {
-    background: none; color: var(--primary); padding: 4px; font-weight: 500;
+    background: none; color: var(--primary); padding: 4px; font-weight: 650;
     text-decoration: underline;
   }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .device {
-    display: flex; justify-content: space-between; align-items: center; padding: 10px;
-    border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; padding: 14px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 9px; cursor: pointer; background: var(--surface-soft); transition: .18s ease;
   }
-  .device.selected { border-color: var(--primary); background: #e0f2f1; }
+  .device:hover, .device.selected { border-color: var(--accent); background: #e8f8f5; transform: translateX(2px); }
   .muted { color: var(--muted); font-size: 12px; }
   .badge {
     font-size: 11px; padding: 2px 8px; border-radius: 10px;
-    background: #e0f2f1; color: var(--primary-dark); font-weight: 600;
+    background: #dff6f1; color: var(--primary-dark); font-weight: 700;
   }
   .badge.viewer { background: #eceff1; color: var(--muted); }
   .code {
@@ -76,6 +100,24 @@
   }
   .toast.show { opacity: 1; }
   .hidden { display: none; }
+  .dashboard-content > .card:first-of-type { border-top: 3px solid var(--accent); }
+  .card h3 { color: var(--ink); }
+  hr { border-color: var(--border) !important; }
+  .overview-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px; }
+  .overview-heading h2 { margin:0 0 5px; color:var(--ink); font-size:22px; text-transform:none; letter-spacing:-.02em; }
+  .overview-heading p { margin:0; }
+  .overview-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; }
+  .overview-item { min-width:0; padding:16px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-soft); }
+  .overview-item span { display:block; margin-bottom:8px; color:var(--muted); font-size:11px; font-weight:750; letter-spacing:.04em; text-transform:uppercase; }
+  .overview-item strong { display:block; color:var(--ink); font-size:14px; line-height:1.4; overflow-wrap:anywhere; }
+  .overview-item[data-tone="success"] { border-left:4px solid var(--success); }
+  .overview-item[data-tone="warning"] { border-left:4px solid var(--warning); }
+  .command-groups { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; margin-top:20px; }
+  .command-group { min-width:0; padding:16px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-soft); }
+  .command-group h3 { margin:0 0 5px; font-size:14px; }
+  .command-group p { min-height:34px; margin:0 0 13px; }
+  .command-grid { display:grid; gap:9px; }
+  .command-grid button { width:100%; min-width:0; }
   /* display:flex fica aqui, e não no style do elemento: lá venceria o .hidden. */
   /* Janela flutuante do visualizador: deixa o painel livre por trás. */
   #viewerModal { position:fixed; right:16px; bottom:16px; width:360px;
@@ -114,15 +156,51 @@
                  border:1px solid #eee; border-radius:8px; padding:0 10px; }
   .apps-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .apps-toolbar input[type=search] { flex:1; min-width:160px; padding:9px 12px;
-             border:1px solid #ccc; border-radius:8px; }
+             border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-soft); }
+  @media (max-width: 860px) {
+    header { min-height: 68px; padding: 14px 20px; }
+    .app-shell { display: block; min-height: auto; }
+    .sidebar { padding: 10px 14px; position: sticky; top: 68px; z-index: 10; overflow-x: auto; }
+    .sidebar::before { display: none; }
+    .tabs { flex-direction: row; min-width: max-content; }
+    .tabs button { text-align: center; padding: 10px 13px; }
+    .dashboard-content { padding: 22px 16px 40px; }
+    .overview-grid, .command-groups { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 560px) {
+    header { padding: 13px 16px; }
+    header h1 { font-size: 16px; }
+    .grid { grid-template-columns: 1fr; }
+    .overview-grid, .command-groups { grid-template-columns:1fr; }
+    .overview-heading { display:block; }
+    .card { padding: 18px; border-radius: 15px; }
+    .row > button, .row > input, .row > select { max-width: 100%; }
+    #viewerModal { right: 10px; bottom: 10px; max-width: calc(100vw - 20px); }
+    #viewerVideo { height: min(52vw, 200px); }
+  }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#mainContent">Ir para o conteúdo principal</a>
 <header>
   <div class="row" style="gap:8px"><span>🛡️</span><h1>Controle Infantil</h1></div>
   <button id="btnLogout" class="hidden">Sair</button>
 </header>
-<main>
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Navegação do painel">
+    <nav aria-label="Navegação principal">
+      <div id="tabsBar" class="tabs hidden">
+        <button data-tab="commands" class="active">Comandos</button>
+        <button data-tab="apps">Aplicativos</button>
+        <button data-tab="time">Tempo de uso</button>
+        <button data-tab="location">Localização</button>
+        <button data-tab="history">Histórico</button>
+        <button data-tab="people">Pessoas</button>
+      </div>
+    </nav>
+  </aside>
+  <div class="dashboard-content">
+<main id="mainContent">
 
   <!-- Login do responsável -->
   <div class="card hidden" id="authCard">
@@ -155,9 +233,45 @@
     </div>
   </div>
 
+  <section class="card hidden" id="overviewCard" aria-labelledby="overviewTitle">
+    <div class="overview-heading">
+      <div>
+        <h2 id="overviewTitle">Visão geral</h2>
+        <p class="muted">Resumo do aparelho selecionado, sem consultas adicionais.</p>
+      </div>
+      <span class="badge" id="overviewRole">Nenhum aparelho selecionado</span>
+    </div>
+    <div class="overview-grid">
+      <article class="overview-item" data-tone="success">
+        <span>Conexão</span>
+        <strong id="overviewConnection">Selecione um aparelho</strong>
+      </article>
+      <article class="overview-item">
+        <span>Último contato</span>
+        <strong id="overviewLastSeen">Sem dados</strong>
+      </article>
+      <article class="overview-item">
+        <span>Proteção</span>
+        <strong id="overviewProtection">Sem dados</strong>
+      </article>
+      <article class="overview-item">
+        <span>Tempo de uso</span>
+        <strong id="overviewUsage">Sem dados no resumo</strong>
+      </article>
+      <article class="overview-item">
+        <span>Localização</span>
+        <strong id="overviewLocation">Sem dados no resumo</strong>
+      </article>
+      <article class="overview-item" data-tone="warning">
+        <span>Alertas</span>
+        <strong id="overviewAlerts">Sem dados no resumo</strong>
+      </article>
+    </div>
+  </section>
+
   <!-- 4. Comandos -->
   <!-- Abas (aparecem ao escolher um aparelho) -->
-  <div id="tabsBar" class="tabs hidden">
+  <div class="legacy-tabs hidden">
     <button data-tab="commands" class="active">Comandos</button>
     <button data-tab="apps">Aplicativos</button>
     <button data-tab="time">Tempo de uso</button>
@@ -168,13 +282,32 @@
 
   <div class="card hidden" id="commandsCard">
     <h2>Comandos — <span id="selectedLabel"></span></h2>
-    <div class="grid">
-      <button data-cmd="lock_screen">🔒 Bloquear tela</button>
-      <button data-cmd="reboot" class="danger">🔁 Reiniciar</button>
-      <button data-cmd="enable_location" class="secondary">🛰️ Ligar GPS</button>
-      <button data-cmd="request_location" class="secondary">📍 Pedir localização</button>
-      <button data-cmd="start_checkin">🎥 Ver e ouvir (check-in)</button>
-      <button data-cmd="start_screen_view">🖥️ Ver a tela</button>
+    <div class="command-groups">
+      <section class="command-group" data-command-group="protection">
+        <h3>Proteção</h3>
+        <p class="muted">Ações imediatas para manter o aparelho protegido.</p>
+        <div class="command-grid">
+          <button data-cmd="lock_screen">🔒 Bloquear tela</button>
+        </div>
+      </section>
+      <section class="command-group" data-command-group="device">
+        <h3>Dispositivo</h3>
+        <p class="muted">Manutenção, localização e reaproveitamento de configurações.</p>
+        <div class="command-grid">
+          <button data-cmd="reboot" class="danger">🔁 Reiniciar</button>
+          <button data-cmd="enable_location" class="secondary">🛰️ Ligar GPS</button>
+          <button data-cmd="request_location" class="secondary">📍 Pedir localização</button>
+          <button id="btnCopyConfig" class="secondary" type="button">Copiar configuração</button>
+        </div>
+      </section>
+      <section class="command-group" data-command-group="communication">
+        <h3>Comunicação</h3>
+        <p class="muted">Recursos de visualização com aviso no aparelho da criança.</p>
+        <div class="command-grid">
+          <button data-cmd="start_checkin">🎥 Ver e ouvir (check-in)</button>
+          <button data-cmd="start_screen_view">🖥️ Ver a tela</button>
+        </div>
+      </section>
     </div>
     <p class="muted" style="margin-top:12px">
       No check-in, a câmera e o microfone conectam sozinhos, mas o aparelho da
@@ -291,6 +424,8 @@
   </div>
 
 </main>
+  </div>
+</div>
 
 <!-- Visualizador de vídeo/tela (WebRTC) -->
 <div id="viewerModal" class="hidden">
@@ -311,7 +446,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+const { copyConfigCommands, uninstallCommandPayload, unpairButtonLabel } =
+  await import('./device-actions.js');
 const $ = id => document.getElementById(id);
 // Projeto Supabase deste painel. A URL e a chave anon (publishable) são públicas
 // por design — quem protege os dados é o RLS no banco. Ficam embutidas para o
@@ -522,6 +659,36 @@ async function enterApp() {
 }
 
 // --- 3. Aparelhos ---------------------------------------------------------
+function renderOverview(device, role) {
+  const values = device ? {
+    role: role === 'guardian' ? 'Guardião' : 'Observador',
+    connection: device.last_seen ? 'Comunicação registrada' : 'Aguardando primeira comunicação',
+    lastSeen: device.last_seen && !Number.isNaN(new Date(device.last_seen).getTime())
+      ? new Date(device.last_seen).toLocaleString('pt-BR') : 'Ainda não informado',
+    protection: role === 'guardian' ? 'Gerenciamento completo' : 'Somente leitura',
+    usage: 'Consulte a aba Tempo de uso',
+    location: 'Consulte a aba Localização',
+    alerts: 'Não disponível na lista de aparelhos',
+  } : {
+    role: 'Nenhum aparelho selecionado',
+    connection: 'Selecione um aparelho',
+    lastSeen: 'Sem dados',
+    protection: 'Sem dados',
+    usage: 'Sem dados no resumo',
+    location: 'Sem dados no resumo',
+    alerts: 'Sem dados no resumo',
+  };
+
+  $('overviewRole').textContent = values.role;
+  $('overviewRole').classList.toggle('viewer', role !== 'guardian');
+  $('overviewConnection').textContent = values.connection;
+  $('overviewLastSeen').textContent = values.lastSeen;
+  $('overviewProtection').textContent = values.protection;
+  $('overviewUsage').textContent = values.usage;
+  $('overviewLocation').textContent = values.location;
+  $('overviewAlerts').textContent = values.alerts;
+}
+
 async function loadDevices() {
   try {
     const [devices, links] = await Promise.all([
@@ -533,6 +700,10 @@ async function loadDevices() {
     links.filter(l => l.controller_id === state.userId)
          .forEach(l => { state.roles[l.device_id] = l.role; });
     renderDevices();
+    const selectedDevice = state.devices.find(d => d.id === state.selected) || null;
+    const selectedRole = selectedDevice ? state.roles[selectedDevice.id] : null;
+    $('overviewCard').classList.remove('hidden');
+    renderOverview(selectedDevice, selectedRole);
   } catch (e) {
     // A sessão expirada já foi avisada por select().
     if (!expiring) toast('Erro ao carregar: ' + e.message);
@@ -570,10 +741,13 @@ function renderDevices() {
          <span class="badge ${role === 'viewer' ? 'viewer' : ''}">
            ${role === 'guardian' ? 'guardião' : 'observador'}</span>
          ${canRename ? '<button class="link" data-rename>renomear</button>' : ''}
+         <button class="link" data-unpair>${unpairButtonLabel()}</button>
          <div class="muted">visto: ${seen}</div></div><span>›</span>`;
     div.onclick = () => selectDevice(d);
     const rn = div.querySelector('[data-rename]');
     if (rn) rn.onclick = (e) => { e.stopPropagation(); renameDevice(d); };
+    const up = div.querySelector('[data-unpair]');
+    up.onclick = (e) => { e.stopPropagation(); unlink(state.userId); };
     list.appendChild(div);
   });
 }
@@ -604,9 +778,12 @@ function selectDevice(d) {
   state.selected = d.id;
   const isGuardian = state.roles[d.id] === 'guardian';
   $('selectedLabel').textContent = d.label;
+  $('overviewCard').classList.remove('hidden');
+  renderOverview(d, state.roles[d.id]);
   $('tabsBar').classList.remove('hidden');
   showTab(state.activeTab || 'commands');
   document.querySelectorAll('[data-cmd]').forEach(b => { b.disabled = !isGuardian; });
+  $('btnCopyConfig').disabled = !isGuardian;
   ['btnLoadApps', 'btnSaveApps', 'btnInstallApp', 'installInput',
    'timeEnabled', 'timeStart', 'timeEnd', 'timeLimit', 'btnSaveTime', 'appsSearch']
     .forEach(id => { $(id).disabled = !isGuardian; });
@@ -665,6 +842,43 @@ async function sendCommand(type) {
   } catch (e) { toast(e.message); }
 }
 
+async function copyConfiguration() {
+  if (!state.selected) return toast('Escolha um aparelho de destino');
+  if (state.roles[state.selected] !== 'guardian') {
+    return toast('Você precisa ser guardião do aparelho de destino');
+  }
+  const sources = state.devices.filter(d =>
+    d.id !== state.selected && state.roles[d.id] === 'guardian');
+  if (!sources.length) return toast('Não há outro aparelho configurado para copiar');
+
+  const options = sources.map((d, i) => `${i + 1}. ${d.label}`).join('\n');
+  const choice = Number(prompt('Copiar configuração de qual aparelho?\n\n' + options));
+  const source = sources[choice - 1];
+  if (!source) return;
+  const target = state.devices.find(d => d.id === state.selected);
+  if (!confirm(`Copiar aplicativos e limites de tempo de “${source.label}” para “${target?.label || 'este aparelho'}”?`)) return;
+
+  try {
+    const [apps, statuses] = await Promise.all([
+      select(`device_apps?device_id=eq.${source.id}&select=package,allowed`),
+      select(`device_status?device_id=eq.${source.id}` +
+        '&select=time_enabled,start_minute,end_minute,daily_limit_minutes'),
+    ]);
+    const commands = copyConfigCommands(apps, statuses[0] || null);
+    for (const command of commands) {
+      await rpc('controller_send_command', {
+        p_device: state.selected, p_type: command.type, p_payload: command.payload,
+      });
+    }
+    toast(statuses[0]
+      ? 'Configuração copiada ✅ o celular aplica em alguns segundos'
+      : 'Apps copiados ✅ (sem limites de tempo salvos)');
+    setTimeout(() => { loadApps(); loadStatus(false); }, 4000);
+  } catch (e) { toast('Não foi possível copiar: ' + e.message); }
+}
+
+$('btnCopyConfig').onclick = copyConfiguration;
+
 // --- 4b. Aplicativos ------------------------------------------------------
 let deviceApps = [];
 let allowedSet = new Set();
@@ -697,6 +911,7 @@ function updateAppsCount() {
 
 function renderApps() {
   const box = $('appsList');
+  const canManageApps = state.roles[state.selected] === 'guardian';
   if (!deviceApps.length) {
     box.classList.add('muted');
     box.textContent = 'O celular ainda não enviou a lista de apps. Abra o Controle ' +
@@ -719,12 +934,15 @@ function renderApps() {
     const apps = groups[cat];
     const rows = apps.map(a =>
       `<label class="app-row"><span>${esc(a.label)}</span>
-         <input type="checkbox" data-pkg="${esc(a.package)}" ${allowedSet.has(a.package) ? 'checked' : ''}></label>`
+         <input type="checkbox" data-pkg="${esc(a.package)}" ${allowedSet.has(a.package) ? 'checked' : ''} ${canManageApps ? '' : 'disabled'}>
+         ${canManageApps && a.package !== 'com.controleinfantil.kids'
+           ? `<button type="button" class="link" data-uninstall="${esc(a.package)}">desinstalar</button>` : ''}
+       </label>`
     ).join('');
     const open = searching || openCats.has(cat) || cats.length === 1;
     return `<details class="cat-node" data-cat="${cat}" ${open ? 'open' : ''}>
         <summary><span class="arrow">▶</span>
-          <input type="checkbox" data-cat-toggle="${cat}" title="Marcar/desmarcar todos">
+          <input type="checkbox" data-cat-toggle="${cat}" title="Marcar/desmarcar todos" ${canManageApps ? '' : 'disabled'}>
           <span>${CAT_LABELS[cat] || cat}</span>
           <span class="cat-count" data-cat-count="${cat}"></span></summary>
         ${rows}</details>`;
@@ -773,6 +991,13 @@ function renderApps() {
       updateAppsCount();
     };
   });
+  box.querySelectorAll('[data-uninstall]').forEach(btn => {
+    btn.onclick = e => {
+      e.preventDefault();
+      e.stopPropagation();
+      uninstallApp(btn.getAttribute('data-uninstall'), btn.closest('.app-row')?.querySelector('span')?.textContent);
+    };
+  });
   updateAppsCount();
 }
 
@@ -800,6 +1025,19 @@ $('btnSaveApps').onclick = async () => {
     setTimeout(loadApps, 4000);
   } catch (e) { toast(e.message); }
 };
+
+async function uninstallApp(packageName, label) {
+  if (!packageName || packageName === 'com.controleinfantil.kids') return;
+  if (!confirm(`Desinstalar “${label || packageName}” do celular? Essa ação não pode ser desfeita remotamente.`)) return;
+  try {
+    const command = uninstallCommandPayload(packageName);
+    await rpc('controller_send_command', {
+      p_device: state.selected, p_type: command.type, p_payload: command.payload,
+    });
+    toast('Pedido de desinstalação enviado ✅');
+    setTimeout(loadApps, 8000);
+  } catch (e) { toast('Não foi possível desinstalar: ' + e.message); }
+}
 
 $('btnInstallApp').onclick = async () => {
   const raw = $('installInput').value.trim();
