@@ -292,12 +292,11 @@
       </section>
       <section class="command-group" data-command-group="device">
         <h3>Dispositivo</h3>
-        <p class="muted">Manutenção, localização e reaproveitamento de configurações.</p>
+        <p class="muted">Ações de manutenção e localização do aparelho.</p>
         <div class="command-grid">
           <button data-cmd="reboot" class="danger">🔁 Reiniciar</button>
           <button data-cmd="enable_location" class="secondary">🛰️ Ligar GPS</button>
           <button data-cmd="request_location" class="secondary">📍 Pedir localização</button>
-          <button id="btnCopyConfig" class="secondary" type="button">Copiar configuração</button>
         </div>
       </section>
       <section class="command-group" data-command-group="communication">
@@ -446,9 +445,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script type="module">
-const { copyConfigCommands, uninstallCommandPayload, unpairButtonLabel } =
-  await import('./device-actions.js');
+<script>
 const $ = id => document.getElementById(id);
 // Projeto Supabase deste painel. A URL e a chave anon (publishable) são públicas
 // por design — quem protege os dados é o RLS no banco. Ficam embutidas para o
@@ -741,13 +738,10 @@ function renderDevices() {
          <span class="badge ${role === 'viewer' ? 'viewer' : ''}">
            ${role === 'guardian' ? 'guardião' : 'observador'}</span>
          ${canRename ? '<button class="link" data-rename>renomear</button>' : ''}
-         <button class="link" data-unpair>${unpairButtonLabel()}</button>
          <div class="muted">visto: ${seen}</div></div><span>›</span>`;
     div.onclick = () => selectDevice(d);
     const rn = div.querySelector('[data-rename]');
     if (rn) rn.onclick = (e) => { e.stopPropagation(); renameDevice(d); };
-    const up = div.querySelector('[data-unpair]');
-    up.onclick = (e) => { e.stopPropagation(); unlink(state.userId); };
     list.appendChild(div);
   });
 }
@@ -783,7 +777,6 @@ function selectDevice(d) {
   $('tabsBar').classList.remove('hidden');
   showTab(state.activeTab || 'commands');
   document.querySelectorAll('[data-cmd]').forEach(b => { b.disabled = !isGuardian; });
-  $('btnCopyConfig').disabled = !isGuardian;
   ['btnLoadApps', 'btnSaveApps', 'btnInstallApp', 'installInput',
    'timeEnabled', 'timeStart', 'timeEnd', 'timeLimit', 'btnSaveTime', 'appsSearch']
     .forEach(id => { $(id).disabled = !isGuardian; });
@@ -842,43 +835,6 @@ async function sendCommand(type) {
   } catch (e) { toast(e.message); }
 }
 
-async function copyConfiguration() {
-  if (!state.selected) return toast('Escolha um aparelho de destino');
-  if (state.roles[state.selected] !== 'guardian') {
-    return toast('Você precisa ser guardião do aparelho de destino');
-  }
-  const sources = state.devices.filter(d =>
-    d.id !== state.selected && state.roles[d.id] === 'guardian');
-  if (!sources.length) return toast('Não há outro aparelho configurado para copiar');
-
-  const options = sources.map((d, i) => `${i + 1}. ${d.label}`).join('\n');
-  const choice = Number(prompt('Copiar configuração de qual aparelho?\n\n' + options));
-  const source = sources[choice - 1];
-  if (!source) return;
-  const target = state.devices.find(d => d.id === state.selected);
-  if (!confirm(`Copiar aplicativos e limites de tempo de “${source.label}” para “${target?.label || 'este aparelho'}”?`)) return;
-
-  try {
-    const [apps, statuses] = await Promise.all([
-      select(`device_apps?device_id=eq.${source.id}&select=package,allowed`),
-      select(`device_status?device_id=eq.${source.id}` +
-        '&select=time_enabled,start_minute,end_minute,daily_limit_minutes'),
-    ]);
-    const commands = copyConfigCommands(apps, statuses[0] || null);
-    for (const command of commands) {
-      await rpc('controller_send_command', {
-        p_device: state.selected, p_type: command.type, p_payload: command.payload,
-      });
-    }
-    toast(statuses[0]
-      ? 'Configuração copiada ✅ o celular aplica em alguns segundos'
-      : 'Apps copiados ✅ (sem limites de tempo salvos)');
-    setTimeout(() => { loadApps(); loadStatus(false); }, 4000);
-  } catch (e) { toast('Não foi possível copiar: ' + e.message); }
-}
-
-$('btnCopyConfig').onclick = copyConfiguration;
-
 // --- 4b. Aplicativos ------------------------------------------------------
 let deviceApps = [];
 let allowedSet = new Set();
@@ -911,7 +867,6 @@ function updateAppsCount() {
 
 function renderApps() {
   const box = $('appsList');
-  const canManageApps = state.roles[state.selected] === 'guardian';
   if (!deviceApps.length) {
     box.classList.add('muted');
     box.textContent = 'O celular ainda não enviou a lista de apps. Abra o Controle ' +
@@ -934,15 +889,12 @@ function renderApps() {
     const apps = groups[cat];
     const rows = apps.map(a =>
       `<label class="app-row"><span>${esc(a.label)}</span>
-         <input type="checkbox" data-pkg="${esc(a.package)}" ${allowedSet.has(a.package) ? 'checked' : ''} ${canManageApps ? '' : 'disabled'}>
-         ${canManageApps && a.package !== 'com.controleinfantil.kids'
-           ? `<button type="button" class="link" data-uninstall="${esc(a.package)}">desinstalar</button>` : ''}
-       </label>`
+         <input type="checkbox" data-pkg="${esc(a.package)}" ${allowedSet.has(a.package) ? 'checked' : ''}></label>`
     ).join('');
     const open = searching || openCats.has(cat) || cats.length === 1;
     return `<details class="cat-node" data-cat="${cat}" ${open ? 'open' : ''}>
         <summary><span class="arrow">▶</span>
-          <input type="checkbox" data-cat-toggle="${cat}" title="Marcar/desmarcar todos" ${canManageApps ? '' : 'disabled'}>
+          <input type="checkbox" data-cat-toggle="${cat}" title="Marcar/desmarcar todos">
           <span>${CAT_LABELS[cat] || cat}</span>
           <span class="cat-count" data-cat-count="${cat}"></span></summary>
         ${rows}</details>`;
@@ -991,13 +943,6 @@ function renderApps() {
       updateAppsCount();
     };
   });
-  box.querySelectorAll('[data-uninstall]').forEach(btn => {
-    btn.onclick = e => {
-      e.preventDefault();
-      e.stopPropagation();
-      uninstallApp(btn.getAttribute('data-uninstall'), btn.closest('.app-row')?.querySelector('span')?.textContent);
-    };
-  });
   updateAppsCount();
 }
 
@@ -1025,19 +970,6 @@ $('btnSaveApps').onclick = async () => {
     setTimeout(loadApps, 4000);
   } catch (e) { toast(e.message); }
 };
-
-async function uninstallApp(packageName, label) {
-  if (!packageName || packageName === 'com.controleinfantil.kids') return;
-  if (!confirm(`Desinstalar “${label || packageName}” do celular? Essa ação não pode ser desfeita remotamente.`)) return;
-  try {
-    const command = uninstallCommandPayload(packageName);
-    await rpc('controller_send_command', {
-      p_device: state.selected, p_type: command.type, p_payload: command.payload,
-    });
-    toast('Pedido de desinstalação enviado ✅');
-    setTimeout(loadApps, 8000);
-  } catch (e) { toast('Não foi possível desinstalar: ' + e.message); }
-}
 
 $('btnInstallApp').onclick = async () => {
   const raw = $('installInput').value.trim();

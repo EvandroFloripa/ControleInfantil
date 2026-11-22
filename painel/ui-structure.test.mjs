@@ -1,8 +1,90 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
 
 const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+const commandTypes = [
+  'lock_screen', 'reboot', 'enable_location', 'request_location',
+  'start_checkin', 'start_screen_view',
+];
+
+function inlineClassicScript() {
+  const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)];
+  assert.equal(scripts.length, 1, 'o painel deve ter um único script inline');
+  assert.doesNotMatch(scripts[0][1], /\btype\s*=\s*["']module["']/);
+  assert.doesNotMatch(scripts[0][2], /device-actions\.js/);
+  return scripts[0][2];
+}
+
+function fakeElement(attributes = {}) {
+  const classes = new Set(['hidden']);
+  const attrs = new Map(Object.entries(attributes));
+  return {
+    children: [],
+    classList: {
+      add: (...names) => names.forEach(name => classes.add(name)),
+      remove: (...names) => names.forEach(name => classes.delete(name)),
+      contains: name => classes.has(name),
+      toggle: (name, force) => {
+        const enabled = force === undefined ? !classes.has(name) : force;
+        if (enabled) classes.add(name); else classes.delete(name);
+        return enabled;
+      },
+    },
+    style: {},
+    textContent: '',
+    innerHTML: '',
+    value: '',
+    checked: false,
+    disabled: false,
+    appendChild(child) { this.children.push(child); },
+    addEventListener() {},
+    querySelector() { return null; },
+    querySelectorAll() { return []; },
+    getAttribute(name) { return attrs.get(name) ?? null; },
+    setAttribute(name, value) { attrs.set(name, value); },
+  };
+}
+
+function bootPanel() {
+  const elements = new Map();
+  const buttons = commandTypes.map(type => fakeElement({ 'data-cmd': type }));
+  const fetchCalls = [];
+  const storage = { getItem: () => null, setItem() {}, removeItem() {}, clear() {} };
+  const document = {
+    getElementById(id) {
+      if (!elements.has(id)) elements.set(id, fakeElement());
+      return elements.get(id);
+    },
+    createElement: () => fakeElement(),
+    querySelectorAll: selector => selector === '[data-cmd]' ? buttons : [],
+  };
+  const context = {
+    document,
+    window: { addEventListener() {} },
+    localStorage: storage,
+    sessionStorage: storage,
+    location: { hash: '', origin: 'https://example.test', pathname: '/painel/', search: '', reload() {} },
+    history: { replaceState() {} },
+    URLSearchParams,
+    crypto: { randomUUID: () => '00000000-0000-4000-8000-000000000000' },
+    console,
+    confirm: () => true,
+    prompt: () => null,
+    setTimeout: () => 0,
+    setInterval: () => 0,
+    clearInterval() {},
+    fetch: async (url, options = {}) => {
+      fetchCalls.push({ url, options });
+      return { ok: true, status: 200, text: async () => '', json: async () => [] };
+    },
+  };
+  const source = inlineClassicScript() +
+    '\n;globalThis.__panelTest = { state, renderDevices };';
+  new vm.Script(source, { filename: 'painel/index.html:inline' }).runInNewContext(context);
+  return { buttons, elements, fetchCalls, panel: context.__panelTest };
+}
 
 test('exposes the professional dashboard shell and design tokens', () => {
   assert.match(html, /--surface:/);
@@ -40,16 +122,8 @@ test('groups existing commands without changing their command types', () => {
   for (const group of ['protection', 'device', 'communication']) {
     assert.match(html, new RegExp(`data-command-group="${group}"`));
   }
-  for (const command of [
-    'lock_screen', 'reboot', 'enable_location', 'request_location',
-    'start_checkin', 'start_screen_view',
-  ]) {
-    assert.equal((html.match(new RegExp(`data-cmd="${command}"`, 'g')) || []).length, 1);
-  }
-  assert.match(html, /\$\('btnCopyConfig'\)\.disabled = !isGuardian/);
-  assert.match(html, /const canManageApps = state\.roles\[state\.selected\] === 'guardian'/);
-  assert.match(html, /canManageApps \? '' : 'disabled'/);
-  assert.match(html, /canManageApps && a\.package !== 'com\.controleinfantil\.kids'/);
+  const actualCommands = [...html.matchAll(/\bdata-cmd="([^"]+)"/g)].map(match => match[1]);
+  assert.deepEqual(actualCommands, commandTypes);
 });
 
 test('keeps the dashboard responsive and keyboard-visible', () => {
@@ -66,4 +140,35 @@ test('preserves the functional panel contracts', () => {
   ]) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
+});
+
+test('initializes without external modules and wires the existing command handler', async () => {
+  const harness = bootPanel();
+  harness.buttons.forEach(button => assert.equal(typeof button.onclick, 'function'));
+
+  harness.panel.state.selected = 'device-1';
+  harness.panel.state.url = 'https://example.test';
+  harness.panel.state.key = 'anon-key';
+  harness.buttons[0].onclick();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.equal(harness.fetchCalls.length, 1);
+  assert.match(harness.fetchCalls[0].url, /\/rpc\/controller_send_command$/);
+  assert.deepEqual(JSON.parse(harness.fetchCalls[0].options.body), {
+    p_device: 'device-1',
+    p_type: 'lock_screen',
+  });
+});
+
+test('renders viewer device cards without an unlink control', () => {
+  const harness = bootPanel();
+  harness.panel.state.userId = 'viewer-1';
+  harness.panel.state.devices = [{ id: 'device-1', label: 'Celular', last_seen: null }];
+  harness.panel.state.roles = { 'device-1': 'viewer' };
+
+  harness.panel.renderDevices();
+
+  const cards = harness.elements.get('devicesList').children;
+  assert.equal(cards.length, 1);
+  assert.doesNotMatch(cards[0].innerHTML, /data-unpair|desparear/);
 });
