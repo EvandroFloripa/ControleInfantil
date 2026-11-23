@@ -941,6 +941,8 @@ const CAT_ICONS = {
   news: '📰', maps: '🗺️', productivity: '🗂️', other: '📦'
 };
 const CAT_ORDER = ['game', 'video', 'audio', 'image', 'social', 'news', 'maps', 'productivity', 'other'];
+// A categoria vem do aparelho (dado não confiável): só valores conhecidos entram no HTML.
+const catOf = a => CAT_ORDER.includes(a.category) ? a.category : 'other';
 
 async function loadApps() {
   if (!state.selected) return;
@@ -1003,7 +1005,7 @@ function renderApps() {
     !q || a.label.toLowerCase().includes(q) || a.package.toLowerCase().includes(q));
 
   const groups = {};
-  filtered.forEach(a => { (groups[a.category || 'other'] = groups[a.category || 'other'] || []).push(a); });
+  filtered.forEach(a => { (groups[catOf(a)] = groups[catOf(a)] || []).push(a); });
   const cats = Object.keys(groups).sort((x, y) => CAT_ORDER.indexOf(x) - CAT_ORDER.indexOf(y));
   const editable = canEditApps();
   const disabled = editable ? '' : 'disabled';
@@ -1057,7 +1059,7 @@ $('appsList').addEventListener('click', e => {
     e.preventDefault();
     if (!canEditApps()) return;
     const cat = todos.getAttribute('data-cat-all');
-    const pkgs = deviceApps.filter(a => (a.category || 'other') === cat).map(a => a.package);
+    const pkgs = deviceApps.filter(a => catOf(a) === cat).map(a => a.package);
     const tudo = pkgs.every(p => allowedSet.has(p));
     pkgs.forEach(p => { if (tudo) allowedSet.delete(p); else allowedSet.add(p); });
     renderApps();

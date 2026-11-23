@@ -287,6 +287,20 @@ test('offers uninstall to guardians only, and never for the panel app itself', (
   assert.doesNotMatch(html2, /data-uninstall="com\.controleinfantil\.kids"/);
 });
 
+test('never injects device-controlled category text into the apps markup', () => {
+  const harness = bootPanel();
+  harness.panel.state.selected = 'device-1';
+  harness.panel.state.roles = { 'device-1': 'guardian' };
+  harness.panel.setDeviceApps([{
+    package: 'com.a', label: 'App A', allowed: true,
+    category: '"><img src=x onerror=alert(1)>',
+  }]);
+  harness.panel.renderApps();
+  const markup = harness.elements.get('appsList').innerHTML;
+  assert.doesNotMatch(markup, /<img/);
+  assert.match(markup, /data-cat-all="other"/);
+});
+
 test('renders viewer device cards without an unlink control', () => {
   const harness = bootPanel();
   harness.panel.state.userId = 'viewer-1';
