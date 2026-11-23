@@ -82,6 +82,7 @@ function bootPanel() {
   };
   const source = inlineClassicScript() +
     '\n;globalThis.__panelTest = { state, renderDevices, selectDevice, renderApps,' +
+    ' setDeviceStatus: s => { deviceStatus = s; renderStatus(); },' +
     ' setDeviceApps: list => {' +
     ' deviceApps = list; allowedSet = new Set(list.filter(a => a.allowed).map(a => a.package));' +
     ' savedSet = new Set(allowedSet); } };';
@@ -228,9 +229,8 @@ test('gives each navigation tab an icon and keeps its label for assistive techno
     assert.match(button, /class="tab-label"/);
     assert.match(button, /title="[^"]+"/);
   }
-  const tablet = html.slice(
-    html.indexOf('@media (max-width: 860px)'),
-    html.indexOf('@media (max-width: 560px)'));
+  const inicio = html.indexOf('@media (max-width: 860px)');
+  const tablet = html.slice(inicio, html.indexOf('@media', inicio + 10));
   assert.match(tablet, /\.tab-label\s*\{/);
   assert.match(tablet, /\.tab-icon\s*\{/);
 });
@@ -299,6 +299,26 @@ test('never injects device-controlled category text into the apps markup', () =>
   const markup = harness.elements.get('appsList').innerHTML;
   assert.doesNotMatch(markup, /<img/);
   assert.match(markup, /data-cat-all="other"/);
+});
+
+test('organizes time, location and history as the approved prototype', () => {
+  for (const id of ['timeMeter', 'timeMeterValue', 'timeMeterBar', 'timeSavebar', 'timePending',
+    'btnDiscardTime', 'btnSaveTime', 'locationMapArea', 'usageFilter']) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  for (const f of ['all', 'blocked']) assert.match(html, new RegExp(`data-usage-filter="${f}"`));
+  assert.match(html, /class="event"/);
+});
+
+test('shows the daily usage meter against the daily limit', () => {
+  const harness = bootPanel();
+  harness.panel.state.selected = 'device-1';
+  harness.panel.setDeviceStatus({
+    time_enabled: true, start_minute: 480, end_minute: 1200,
+    daily_limit_minutes: 60, used_minutes_today: 50, override_until: null,
+  });
+  assert.equal(harness.elements.get('timeMeterValue').textContent, '50 min de 60 min');
+  assert.equal(harness.elements.get('timeMeterBar').getAttribute('data-warn'), 'true');
 });
 
 test('renders viewer device cards without an unlink control', () => {
