@@ -76,7 +76,21 @@ Não pertencem a nenhum lote do plano de entrega e não foram revisadas nesta et
 3. Só depois do aceite visual de LOTE-05 e LOTE-06, liberar LOTE-07.
 4. Tratar as alterações da seção 5 em lote separado, com dono definido.
 
-## 8. Limitações da evidência
+## 8. Inspeção visual — 2026-11-23 (parcial, sem aceite)
+
+Método: `painel/` servido em `127.0.0.1` e aberto no Chrome; servidor e aba encerrados ao final.
+
+- **Login:** tela de entrada renderiza corretamente em desktop. Sem credenciais de responsável, as abas não foram vistas com dados reais.
+- **Desktop (simulação de DOM com dados de exemplo):** `h1` único; toast com `role="status"`; visão geral e grade de comandos sem rolagem horizontal.
+- **Observador (`selectDevice` com papel `viewer`):** comandos desabilitados; avisos "Somente leitura" em Aplicativos e Tempo de uso visíveis.
+- **Estados de erro reais:** sem API no servidor local, Aplicativos e Tempo de uso exibiram "Não foi possível carregar …: HTTP 404" com o texto do erro.
+- **Celular (iframe 390 px):** sem rolagem horizontal na página (`scrollWidth` 374 em viewport de 389).
+- **Ponto de atenção para avaliação humana:** no celular, a barra de abas rola horizontalmente dentro da lateral; "Localização", "Histórico" e "Pessoas" ficam fora da tela sem indicação clara.
+- **Não verificado:** teclado, contraste sistemático, dados reais de aparelho, localização, histórico e pessoas.
+
+Conclusão: evidência parcial. **Aceite visual de LOTE-05 e da Task 2 do LOTE-06 continua pendente** de inspeção humana com conta real. Regressão Android (Task 3) não executada.
+
+## 9. Limitações da evidência
 
 - Sem execução contra Supabase real nesta sessão.
 - Sem teste em aparelho Android físico (Device Owner, Acessibilidade, localização, WebRTC, TURN, reboot).
