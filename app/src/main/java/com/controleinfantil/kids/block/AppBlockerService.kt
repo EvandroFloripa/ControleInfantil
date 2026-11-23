@@ -29,7 +29,7 @@ class AppBlockerService : AccessibilityService() {
         val pkg = event.packageName?.toString() ?: return
         val blocked = shouldBlock(pkg)
         logUsage(pkg, blocked)
-        if (blocked) goHome()
+        if (blocked) goHome(pkg)
     }
 
     /** Registra no histórico a abertura de um app "de verdade" (não o sistema/nós). */
@@ -75,13 +75,17 @@ class AppBlockerService : AccessibilityService() {
     private fun isInstaller(pkg: String): Boolean =
         pkg == PLAY_PACKAGE || pkg.contains("packageinstaller") || pkg == "com.android.packageinstaller"
 
-    private fun goHome() {
+    private fun goHome(pkg: String) {
         runCatching {
             startActivity(
                 Intent(this, LauncherActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             )
         }
+        // Sair da frente não basta: o app continuaria vivo em segundo plano.
+        // Fora do horário, encerra todos os apps da criança; senão, só o bloqueado.
+        if (checkRules(this).blocked) AppCloser.closeAllSoon(this)
+        else AppCloser.closeOneSoon(this, pkg)
     }
 
     private fun essentials(): Set<String> {

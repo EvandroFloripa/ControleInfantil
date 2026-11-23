@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Encerra apps da criança em segundo plano quando o bloqueio entra em vigor. -->
+    <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
     <!-- Bloqueio de tela por cima de outros apps, sem Device Owner. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
