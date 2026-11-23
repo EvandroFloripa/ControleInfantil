@@ -48,7 +48,7 @@ jobs:
           server: ${{ env.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftp
+          protocol: ftps
           port: 21
           local-dir: ./painel/
           # Document root informado pela Hostinger para o subdomínio.
