@@ -45,7 +45,7 @@ jobs:
       - name: Enviar para a Hostinger
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
-          server: ${{ env.FTP_HOST_IPV4 }}
+          server: ftp.ea-systems.dev.br
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
