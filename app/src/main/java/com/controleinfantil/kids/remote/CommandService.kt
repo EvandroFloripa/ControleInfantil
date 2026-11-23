@@ -17,6 +17,7 @@ import com.controleinfantil.kids.checkin.CheckinService
 import com.controleinfantil.kids.launcher.KioskManager
 import com.controleinfantil.kids.launcher.LauncherActivity
 import com.controleinfantil.kids.launcher.launchablePackages
+import com.controleinfantil.kids.block.AppCloser
 import com.controleinfantil.kids.block.InstallAllow
 import com.controleinfantil.kids.block.SilentInstaller
 import com.controleinfantil.kids.block.UsageLog
@@ -152,6 +153,8 @@ class CommandService : Service() {
             // cada 15 s impedia o responsável de entrar na área dele com o PIN.
             Log.i(TAG, "Limite de horário atingido; voltando ao launcher")
             showLauncher()
+            // Tirar da frente não basta: encerra os apps da criança que continuam em segundo plano.
+            AppCloser.closeAllSoon(this)
         }
     }
 
