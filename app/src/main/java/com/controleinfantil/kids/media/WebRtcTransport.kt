@@ -157,7 +157,11 @@ class WebRtcTransport(
         pendingCapture = { capturer.startCapture(1280, 720, 30) }
         pc.addTrack(factory.createVideoTrack("video", source), listOf(STREAM_ID))
 
-        // O microfone só grava quando a conexão sobe (o WebRTC abre o áudio aí).
+        addMicTrack(factory, pc)
+    }
+
+    /** Microfone: só grava quando a conexão sobe (o WebRTC abre o áudio aí). */
+    private fun addMicTrack(factory: PeerConnectionFactory, pc: PeerConnection) {
         val audio = factory.createAudioSource(MediaConstraints())
         audioSource = audio
         pc.addTrack(factory.createAudioTrack("audio", audio), listOf(STREAM_ID))
@@ -191,6 +195,8 @@ class WebRtcTransport(
         capturer.initialize(surfaceHelper, appContext, source.capturerObserver)
         pendingCapture = { capturer.startCapture(1280, 720, 15) }
         pc.addTrack(factory.createVideoTrack("screen", source), listOf(STREAM_ID))
+        // "Ver tela e ouvir": o som do microfone vai na mesma conexão e toca no mesmo vídeo.
+        if (session.withAudio) addMicTrack(factory, pc)
     }
 
     private fun createCameraCapturer(): VideoCapturer? {

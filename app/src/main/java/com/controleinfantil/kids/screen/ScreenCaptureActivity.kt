@@ -28,7 +28,7 @@ class ScreenCaptureActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
-            ScreenShareService.start(this, result.resultCode, result.data!!, sessionId)
+            ScreenShareService.start(this, result.resultCode, result.data!!, sessionId, withAudio)
         } else {
             Log.i(TAG, "Consentimento de captura de tela negado")
         }
@@ -37,6 +37,9 @@ class ScreenCaptureActivity : AppCompatActivity() {
 
     private val sessionId: String
         get() = intent?.getStringExtra(EXTRA_SESSION).orEmpty()
+
+    private val withAudio: Boolean
+        get() = intent?.getBooleanExtra(EXTRA_AUDIO, false) == true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,11 +58,13 @@ class ScreenCaptureActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "ScreenCaptureActivity"
         private const val EXTRA_SESSION = "session_id"
+        private const val EXTRA_AUDIO = "audio"
 
         /** Abre a tela de consentimento (chamada a partir do serviço de comandos). */
-        fun launch(context: Context, sessionId: String) {
+        fun launch(context: Context, sessionId: String, withAudio: Boolean = false) {
             val intent = Intent(context, ScreenCaptureActivity::class.java)
                 .putExtra(EXTRA_SESSION, sessionId)
+                .putExtra(EXTRA_AUDIO, withAudio)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
         }

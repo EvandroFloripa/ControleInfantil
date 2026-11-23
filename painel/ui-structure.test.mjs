@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
 const commandTypes = [
-  'lock_screen', 'reboot', 'enable_location', 'request_location',
+  'reboot', 'enable_location', 'request_location',
   'start_checkin', 'start_screen_view', 'wake_screen',
 ];
 
@@ -153,7 +153,7 @@ test('initializes without external modules and wires the existing command handle
   harness.panel.state.selected = 'device-1';
   harness.panel.state.url = 'https://example.test';
   harness.panel.state.key = 'anon-key';
-  harness.buttons[0].onclick();
+  harness.elements.get('btnLockToggle').onclick();
   await new Promise(resolve => setImmediate(resolve));
 
   assert.equal(harness.fetchCalls.length, 1);
@@ -337,4 +337,25 @@ test('renders viewer device cards without an unlink control', () => {
   const cards = harness.elements.get('devicesList').children;
   assert.equal(cards.length, 1);
   assert.doesNotMatch(cards[0].innerHTML, /data-unpair|desparear/);
+});
+
+test('sends a parent message as show_message, limited to 120 characters', () => {
+  assert.match(html, /<textarea id="msgText"[^>]*maxlength="120"/);
+  assert.match(html, /id="msgForm"[\s\S]*?id="msgSend"/);
+  assert.match(html, /p_type: 'show_message', p_payload: \{ text \}/);
+  assert.match(html, /'msgText', 'msgSend'/);
+});
+
+test('offers screen with sound as its own viewer action, guardian only', () => {
+  assert.match(html, /<button id="btnScreenAudio"[^>]*disabled>[^<]*Ver tela e ouvir/);
+  assert.match(html, /\$\('btnScreenAudio'\)\.onclick = \(\) => startViewer\('start_screen_view', \{ audio: true \}\)/);
+  assert.match(html, /opts\.audio\s*\?\s*\{ session_id: viewer\.session, audio: true \}/);
+  assert.match(html, /'msgText', 'msgSend', 'btnScreenAudio'/);
+});
+
+test('toggles the screen lock between lock and unlock from the device status', () => {
+  assert.match(html, /<button id="btnLockToggle" disabled>/);
+  assert.match(html, /function renderLockState\(\)/);
+  assert.match(html, /deviceStatus\?\.screen_locked === true\s*\?\s*'unlock_screen'\s*:\s*'lock_screen'/);
+  assert.match(html, /select=control_disabled,screen_locked/);
 });

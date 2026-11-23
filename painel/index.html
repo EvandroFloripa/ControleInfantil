@@ -119,6 +119,9 @@
   .command-group h3 { margin:0 0 5px; font-size:14px; }
   .command-group p { min-height:34px; margin:0 0 13px; }
   .command-grid { display:grid; gap:9px; }
+  .message-form { display:grid; gap:9px; }
+  .message-form textarea { width:100%; resize:vertical; }
+  .message-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
   .command-grid button { width:100%; min-width:0; }
   /* display:flex fica aqui, e não no style do elemento: lá venceria o .hidden. */
   /* Janela flutuante do visualizador: deixa o painel livre por trás. */
@@ -392,7 +395,7 @@
         <h3>Proteção</h3>
         <p class="muted">Ações imediatas para manter o aparelho protegido.</p>
         <div class="command-grid">
-          <button data-cmd="lock_screen">🔒 Bloquear tela</button>
+          <button id="btnLockToggle" disabled>🔒 Bloquear tela</button>
         </div>
       </section>
       <section class="command-group" data-command-group="device">
@@ -410,9 +413,21 @@
         <div class="command-grid">
           <button data-cmd="start_checkin">🎥 Ver e ouvir (check-in)</button>
           <button data-cmd="start_screen_view">🖥️ Ver a tela</button>
+          <button id="btnScreenAudio" disabled>🖥️🔊 Ver tela e ouvir</button>
           <button data-cmd="wake_screen">💡 Acordar a tela</button>
           <button id="btnToggleControl" class="secondary" disabled>Controle</button>
         </div>
+      </section>
+      <section class="command-group" data-command-group="message">
+        <h3>Mensagem para a criança</h3>
+        <p class="muted">Aparece como notificação no aparelho. Até 120 caracteres.</p>
+        <form id="msgForm" class="message-form">
+          <textarea id="msgText" rows="2" maxlength="120" aria-label="Texto da mensagem" placeholder="Ex.: Hora do jantar, venha!"></textarea>
+          <div class="message-foot">
+            <span id="msgCount" class="muted">0/120</span>
+            <button id="msgSend" type="submit">Enviar mensagem</button>
+          </div>
+        </form>
       </section>
     </div>
     <p class="muted" style="margin-top:12px">
@@ -927,7 +942,8 @@ function selectDevice(d) {
   showTab(state.activeTab || 'commands');
   document.querySelectorAll('[data-cmd]').forEach(b => { b.disabled = !isGuardian; });
   ['btnLoadApps', 'btnSaveApps', 'btnInstallApp', 'installInput',
-   'timeEnabled', 'timeStart', 'timeEnd', 'timeLimit', 'btnSaveTime', 'appsSearch']
+   'timeEnabled', 'timeStart', 'timeEnd', 'timeLimit', 'btnSaveTime', 'appsSearch',
+   'msgText', 'msgSend', 'btnScreenAudio', 'btnLockToggle']
     .forEach(id => { $(id).disabled = !isGuardian; });
   document.querySelectorAll('[data-grant]').forEach(b => { b.disabled = !isGuardian; });
   $('btnToggleControl').disabled = !isGuardian;
@@ -1049,6 +1065,26 @@ async function sendCommand(type) {
     setTimeout(refreshControlState, 3000);
   } catch (e) { toast(e.message); }
 }
+
+// Mensagem para a criança: vai como comando show_message, com o mesmo limite do servidor.
+$('msgText').addEventListener('input', () => {
+  $('msgCount').textContent = `${$('msgText').value.length}/120`;
+});
+$('msgForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  if (!state.selected) return toast('Escolha um aparelho');
+  const text = $('msgText').value.trim();
+  if (!text) return toast('Escreva a mensagem antes de enviar');
+  try {
+    await rpc('controller_send_command', {
+      p_device: state.selected, p_type: 'show_message', p_payload: { text },
+    });
+    $('msgText').value = '';
+    $('msgCount').textContent = '0/120';
+    toast('Mensagem enviada ✅');
+    setTimeout(loadHistory, 800);
+  } catch (e) { toast('Não foi possível enviar: ' + e.message); }
+});
 
 // --- 4b. Aplicativos ------------------------------------------------------
 let deviceApps = [];
@@ -1377,20 +1413,31 @@ function renderControlState() {
   const cartao = alerta.parentElement;
   if (cartao) cartao.setAttribute('data-tone', desativado ? 'warning' : 'success');
   btn.textContent = desativado ? '🔓 Reativar controle' : '⏸️ Desativar controle';
+  renderLockState();
+}
+
+// Botão de tela: mostra a ação que vai acontecer (bloquear ou desbloquear).
+function renderLockState() {
+  const btn = $('btnLockToggle');
+  btn.textContent = deviceStatus?.screen_locked === true
+    ? '🔓 Desbloquear tela' : '🔒 Bloquear tela';
 }
 
 // Atualiza só o estado do controle (não mexe no formulário de horários).
 async function refreshControlState() {
   if (!state.selected) return;
   try {
-    const rows = await select(`device_status?device_id=eq.${state.selected}&select=control_disabled`);
-    if (rows[0]) deviceStatus = { ...(deviceStatus || {}), control_disabled: rows[0].control_disabled };
+    const rows = await select(
+      `device_status?device_id=eq.${state.selected}&select=control_disabled,screen_locked`);
+    if (rows[0]) deviceStatus = { ...(deviceStatus || {}), ...rows[0] };
     renderControlState();
   } catch { /* a próxima leitura tenta de novo */ }
 }
 
 $('btnToggleControl').onclick = () =>
   sendCommand(deviceStatus?.control_disabled === true ? 'resume_control' : 'disable_control');
+$('btnLockToggle').onclick = () =>
+  sendCommand(deviceStatus?.screen_locked === true ? 'unlock_screen' : 'lock_screen');
 
 document.querySelectorAll('[data-grant]').forEach(btn => {
   btn.onclick = async () => {
@@ -1631,12 +1678,13 @@ function postControllerSignal(kind, payload) {
   });
 }
 
-async function startViewer(type) {
+async function startViewer(type, opts = {}) {
   viewer.session = uuid();
   viewer.type = type;
   viewer.lastId = 0;
   $('viewerTitle').textContent =
-    type === 'start_checkin' ? 'Check-in de vídeo/áudio' : 'Tela da criança';
+    type === 'start_checkin' ? 'Check-in de vídeo/áudio'
+      : opts.audio ? 'Tela da criança com som' : 'Tela da criança';
   const vm = $('viewerModal');
   vm.classList.remove('hidden', 'maximized', 'minimized');
   vm.style.left = ''; vm.style.top = ''; vm.style.right = '16px'; vm.style.bottom = '16px';
@@ -1676,7 +1724,9 @@ async function startViewer(type) {
   try {
     await rpc('controller_send_command', {
       p_device: state.selected, p_type: type,
-      p_payload: { session_id: viewer.session },
+      p_payload: opts.audio
+        ? { session_id: viewer.session, audio: true }
+        : { session_id: viewer.session },
     });
   } catch (e) {
     toast(e.message);
@@ -1740,6 +1790,7 @@ function stopViewer(sendStop = true) {
 }
 
 $('viewerClose').onclick = () => stopViewer(true);
+$('btnScreenAudio').onclick = () => startViewer('start_screen_view', { audio: true });
 
 // Minimizar / maximizar a janela flutuante.
 $('viewerMin').onclick = () => $('viewerModal').classList.toggle('minimized');

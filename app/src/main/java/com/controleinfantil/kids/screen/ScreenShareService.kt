@@ -40,7 +40,8 @@ class ScreenShareService : Service() {
         }
         // Em primeiro plano ANTES de o WebRTC criar a projeção (exigência do Android 14).
         // Se a notificação falhar, não captura: stopSelf() não interrompe na hora.
-        if (!startAsForeground()) return START_NOT_STICKY
+        val withAudio = intent?.getBooleanExtra(EXTRA_AUDIO, false) == true
+        if (!startAsForeground(withAudio)) return START_NOT_STICKY
 
         val resultCode = intent?.getIntExtra(EXTRA_CODE, 0) ?: 0
         val data = intent?.let {
@@ -64,13 +65,14 @@ class ScreenShareService : Service() {
                 kind = MediaTransport.Kind.SCREEN,
                 screenResultCode = resultCode,
                 screenData = data,
+                withAudio = withAudio,
             )
         )
         return START_NOT_STICKY
     }
 
     /** Mostra a notificação persistente. Devolve false se não conseguiu. */
-    private fun startAsForeground(): Boolean {
+    private fun startAsForeground(withAudio: Boolean): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
@@ -89,11 +91,10 @@ class ScreenShareService : Service() {
             .build()
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(
-                    NOTIF_ID,
-                    notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION,
-                )
+                // Android 14+: o microfone só pode ser usado com o tipo de microfone ativo.
+                var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                if (withAudio) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                startForeground(NOTIF_ID, notification, types)
             } else {
                 startForeground(NOTIF_ID, notification)
             }
@@ -119,13 +120,21 @@ class ScreenShareService : Service() {
         private const val EXTRA_CODE = "code"
         private const val EXTRA_DATA = "data"
         private const val EXTRA_SESSION = "session_id"
+        private const val EXTRA_AUDIO = "audio"
         const val ACTION_STOP = "com.controleinfantil.kids.STOP_SCREEN"
 
-        fun start(context: Context, resultCode: Int, data: Intent, sessionId: String) {
+        fun start(
+            context: Context,
+            resultCode: Int,
+            data: Intent,
+            sessionId: String,
+            withAudio: Boolean = false,
+        ) {
             val intent = Intent(context, ScreenShareService::class.java)
                 .putExtra(EXTRA_CODE, resultCode)
                 .putExtra(EXTRA_DATA, data)
                 .putExtra(EXTRA_SESSION, sessionId)
+                .putExtra(EXTRA_AUDIO, withAudio)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {

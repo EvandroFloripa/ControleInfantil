@@ -26,6 +26,7 @@ interface MediaTransport {
     /**
      * @param screenResultCode / [screenData] só usados quando [kind] é SCREEN — são
      *   o resultado do consentimento de captura pego pela ScreenCaptureActivity.
+     * @param withAudio só para SCREEN: também envia o microfone ("Ver tela e ouvir").
      */
     data class SessionConfig(
         val deviceId: String,
@@ -33,6 +34,7 @@ interface MediaTransport {
         val kind: Kind,
         val screenResultCode: Int = 0,
         val screenData: Intent? = null,
+        val withAudio: Boolean = false,
     )
 
     companion object {
