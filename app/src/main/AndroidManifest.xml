@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Encerra apps da criança em segundo plano quando o bloqueio entra em vigor. -->
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+    <!-- Acordar a tela pelo comando wake_screen. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Bloqueio de tela por cima de outros apps, sem Device Owner. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
@@ -24,6 +26,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
     <application
         android:name=".App"
@@ -100,7 +103,7 @@
         <service
             android:name=".screen.ScreenShareService"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
+            android:foregroundServiceType="mediaProjection|microphone" />
 
         <!-- Re-inicia o serviço após reboot -->
         <receiver
@@ -128,6 +131,10 @@
         <!-- Resultado da instalação silenciosa (Device Owner). -->
         <receiver
             android:name=".block.InstallResultReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".block.UninstallResultReceiver"
             android:exported="false" />
 
     </application>

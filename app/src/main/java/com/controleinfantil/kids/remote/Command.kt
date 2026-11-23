@@ -26,8 +26,17 @@ data class Command(
     /** Pacote a instalar (comando install_app). */
     val appPackage: String get() = payload.optString("package")
 
+    /** Pacote a desinstalar remotamente (comando uninstall_app). */
+    val uninstallPackage: String get() = payload.optString("package")
+
     /** Link do APK para instalação silenciosa (Device Owner). */
     val apkUrl: String get() = payload.optString("apk_url")
+
+    /** Ver a tela com som: também envia o microfone (start_screen_view com audio). */
+    val withAudio: Boolean get() = payload.optBoolean("audio")
+
+    /** Texto da mensagem do responsável (comando show_message). */
+    val messageText: String get() = payload.optString("text")
 
     enum class Type(val wire: String) {
         LOCK_SCREEN("lock_screen"),
@@ -42,8 +51,14 @@ data class Command(
         // Gestão remota de apps (painel)
         SET_ALLOWED_APPS("set_allowed_apps"),
         INSTALL_APP("install_app"),
+        UNINSTALL_APP("uninstall_app"),
         SET_TIME_RULES("set_time_rules"),
         GRANT_TIME("grant_time"),
+        WAKE_SCREEN("wake_screen"),
+        RESUME_CONTROL("resume_control"),
+        DISABLE_CONTROL("disable_control"),
+        SHOW_MESSAGE("show_message"),
+        UNLOCK_SCREEN("unlock_screen"),
         UNKNOWN("unknown");
 
         companion object {

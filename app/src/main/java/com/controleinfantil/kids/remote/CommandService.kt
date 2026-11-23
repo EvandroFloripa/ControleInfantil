@@ -11,15 +11,17 @@ import android.net.Uri
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.controleinfantil.kids.R
 import com.controleinfantil.kids.admin.PolicyManager
+import com.controleinfantil.kids.block.AppBlockerService
 import com.controleinfantil.kids.checkin.CheckinService
 import com.controleinfantil.kids.launcher.KioskManager
 import com.controleinfantil.kids.launcher.LauncherActivity
 import com.controleinfantil.kids.launcher.launchablePackages
-import com.controleinfantil.kids.block.AppCloser
 import com.controleinfantil.kids.block.InstallAllow
 import com.controleinfantil.kids.block.SilentInstaller
+import com.controleinfantil.kids.block.RemoteUninstaller
 import com.controleinfantil.kids.block.UsageLog
 import com.controleinfantil.kids.block.Updater
 import com.controleinfantil.kids.lock.LockScreen
@@ -105,6 +107,8 @@ class CommandService : Service() {
         if (loop == null || loop?.isActive != true) {
             loop = scope.launch { pollLoop() }
         }
+        // Aviso em tempo real de comando novo; a consulta periódica segue como reserva.
+        RealtimeWake.start(this)
         return START_STICKY
     }
 
@@ -132,7 +136,8 @@ class CommandService : Service() {
             } catch (e: Exception) {
                 Log.e(TAG, "Erro no ciclo de polling", e)
             }
-            delay(POLL_INTERVAL_MS)
+            // Espera o intervalo, ou acorda antes se o canal avisar comando novo.
+            WakeSignal.await(POLL_INTERVAL_MS)
         }
     }
 
@@ -153,8 +158,6 @@ class CommandService : Service() {
             // cada 15 s impedia o responsável de entrar na área dele com o PIN.
             Log.i(TAG, "Limite de horário atingido; voltando ao launcher")
             showLauncher()
-            // Tirar da frente não basta: encerra os apps da criança que continuam em segundo plano.
-            AppCloser.closeAllSoon(this)
         }
     }
 
@@ -163,6 +166,73 @@ class CommandService : Service() {
      * Owner é isento. Sem Device Owner o sistema pode ignorar o pedido; aí resta o
      * lockNow(), e o quiosque também não é real (ver KioskManager).
      */
+    /**
+     * Acende a tela de um aparelho ligado. Não liga aparelho desligado: sem o app
+     * rodando, nenhum comando chega. Mantém a tela acesa por alguns segundos.
+     */
+    private fun wakeScreen(): String {
+        val power = getSystemService(android.os.PowerManager::class.java)
+        @Suppress("DEPRECATION")
+        val wake = power.newWakeLock(
+            android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            "ControleInfantil:wake",
+        )
+        wake.acquire(WAKE_MS)
+        return "done"
+    }
+
+    /**
+     * Reativa o controle do responsável pelo painel: volta a valer horário, limite e
+     * quiosque. O comando vale porque quem o envia já está autenticado no painel.
+     */
+    private fun resumeControl(): String {
+        GuardianArea.resumeBlocking(this)
+        lastStatusSig = null
+        showLauncher()
+        return "done"
+    }
+
+    /**
+     * Mostra a mensagem do responsável como notificação de alta prioridade. O texto é
+     * limitado a [MESSAGE_MAX] caracteres, o mesmo limite do painel e do servidor.
+     */
+    private fun showMessage(raw: String): String {
+        val text = raw.trim().take(MESSAGE_MAX)
+        if (text.isEmpty()) return "empty_message"
+        if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) return "notifications_off"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                MESSAGE_CHANNEL_ID,
+                "Mensagens do responsável",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply { description = "Avisos enviados pelo responsável" }
+            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .createNotificationChannel(channel)
+        }
+        val notification = NotificationCompat.Builder(this, MESSAGE_CHANNEL_ID)
+            .setContentTitle("Mensagem do responsável")
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setSmallIcon(R.drawable.ic_shield)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .notify(MESSAGE_NOTIF_ID, notification)
+        return "done"
+    }
+
+    /**
+     * Desativa o controle pelo painel: tudo liberado até o responsável reativar. Mesma
+     * regra do botão na área do aparelho, que também exige o PIN lá.
+     */
+    private fun disableControl(): String {
+        GuardianArea.setControlDisabled(this, true)
+        lastStatusSig = null
+        return "done"
+    }
+
     private fun showLauncher() {
         try {
             startActivity(
@@ -194,8 +264,10 @@ class CommandService : Service() {
         val rules = TimeRules.load(this)
         val used = UsageTracker.usedMinutesToday(this)
         val until = TimeRules.overrideUntil(this).takeIf { it > System.currentTimeMillis() } ?: 0L
+        val desativado = GuardianArea.isControlDisabled()
+        val bloqueada = LockScreen.shouldRestore(this)
         val sig = "${rules.enabled}|${rules.startMinute}|${rules.endMinute}|" +
-            "${rules.dailyLimitMinutes}|$used|$until"
+            "${rules.dailyLimitMinutes}|$used|$until|$desativado|$bloqueada"
         if (sig == lastStatusSig) return
         val json = org.json.JSONObject()
             .put("enabled", rules.enabled)
@@ -204,6 +276,8 @@ class CommandService : Service() {
             .put("limit", rules.dailyLimitMinutes)
             .put("used", used)
             .put("override_until", until)
+            .put("control_disabled", desativado)
+            .put("locked", bloqueada)
         if (client.reportStatus(json)) lastStatusSig = sig
     }
 
@@ -242,7 +316,7 @@ class CommandService : Service() {
                 if (cmd.sessionId.isEmpty()) "error"
                 else {
                     // Abre o consentimento de captura de tela, exigido pelo Android.
-                    ScreenCaptureActivity.launch(this, cmd.sessionId)
+                    ScreenCaptureActivity.launch(this, cmd.sessionId, cmd.withAudio)
                     "started"
                 }
             Command.Type.STOP_CHECKIN -> {
@@ -268,6 +342,8 @@ class CommandService : Service() {
                     openPlayStore(cmd.appPackage)
                 }
             }
+            Command.Type.UNINSTALL_APP ->
+                RemoteUninstaller.uninstall(this, cmd.uninstallPackage, cmd.id)
             Command.Type.SET_TIME_RULES -> {
                 val p = cmd.payload
                 TimeRules.save(
@@ -290,6 +366,16 @@ class CommandService : Service() {
                 lastStatusSig = null
                 "done"
             }
+            Command.Type.WAKE_SCREEN -> wakeScreen()
+            Command.Type.RESUME_CONTROL -> resumeControl()
+            Command.Type.DISABLE_CONTROL -> disableControl()
+            Command.Type.SHOW_MESSAGE -> showMessage(cmd.messageText)
+            Command.Type.UNLOCK_SCREEN -> {
+                // Tira o bloqueio pelo painel: o responsável já está autenticado no painel,
+                // como em resume_control. Não exige o PIN do aparelho.
+                LockScreen.hide(this)
+                "done"
+            }
             Command.Type.UNKNOWN -> "unsupported"
         }
         val detail = when (result) {
@@ -298,6 +384,8 @@ class CommandService : Service() {
             "unsupported" -> "Comando ainda não implementado nesta versão"
             "started" -> "Aguardando o consentimento de captura de tela no aparelho"
             "locked_no_overlay" -> "Tela apagada. Para bloqueio total, permita \"sobrepor a outros apps\" na configuração."
+            "notifications_off" -> "Notificações do Controle Infantil desativadas no aparelho; a mensagem não apareceu"
+            "empty_message" -> "Mensagem vazia"
             else -> null
         }
         val status =
@@ -316,6 +404,12 @@ class CommandService : Service() {
         // Libera a Play por alguns minutos para o bloqueio por Acessibilidade não
         // chutar a criança de volta ao launcher durante a instalação.
         InstallAllow.allowPlay(this)
+        // Como Device Owner, a Play também precisa estar na allowlist do Lock Task;
+        // liberar somente a Acessibilidade não autoriza o startActivity.
+        KioskManager(this).allowTemporarily(
+            AppBlockerService.PLAY_PACKAGE,
+            InstallAllow.windowMs,
+        )
         return try {
             val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg"))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -374,6 +468,14 @@ class CommandService : Service() {
         private const val CHANNEL_ID = "controle_infantil_svc"
         private const val NOTIF_ID = 1001
         private const val POLL_INTERVAL_MS = 15_000L
+
+        /** Canal e id da mensagem do responsável (separados do aviso fixo do serviço). */
+        private const val MESSAGE_CHANNEL_ID = "controle_infantil_msg"
+        private const val MESSAGE_NOTIF_ID = 1002
+        private const val MESSAGE_MAX = 120
+
+        /** Quanto tempo a tela fica acesa depois de "acordar a tela". */
+        private const val WAKE_MS = 5_000L
         private var loop: Job? = null
 
         fun start(context: Context) {

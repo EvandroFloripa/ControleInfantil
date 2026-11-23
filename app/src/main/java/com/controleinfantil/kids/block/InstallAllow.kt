@@ -11,11 +11,11 @@ object InstallAllow {
 
     private const val PREFS = "install_allow"
     private const val KEY_UNTIL = "play_until"
-    private const val WINDOW_MS = 3 * 60_000L
+    const val windowMs = 3 * 60_000L
 
     fun allowPlay(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().putLong(KEY_UNTIL, System.currentTimeMillis() + WINDOW_MS).apply()
+            .edit().putLong(KEY_UNTIL, System.currentTimeMillis() + windowMs).apply()
     }
 
     fun isPlayAllowed(context: Context): Boolean =

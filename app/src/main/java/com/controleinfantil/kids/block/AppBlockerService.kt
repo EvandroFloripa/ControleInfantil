@@ -1,8 +1,12 @@
 package com.controleinfantil.kids.block
 
 import android.accessibilityservice.AccessibilityService
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.telecom.TelecomManager
 import android.text.TextUtils
@@ -24,12 +28,61 @@ import com.controleinfantil.kids.setup.GuardianArea
  */
 class AppBlockerService : AccessibilityService() {
 
+    /**
+     * App que está na frente. O evento só chega quando a janela muda — se a criança
+     * já estava num app quando o horário fechou, nenhum evento vem e ela seguia
+     * usando. Guardamos o pacote para reavaliar periodicamente e ao desbloquear a tela.
+     */
+    private var foregroundPkg: String? = null
+    private val handler = Handler(Looper.getMainLooper())
+
+    private val recheck = object : Runnable {
+        override fun run() {
+            enforceForeground()
+            handler.postDelayed(this, RECHECK_MS)
+        }
+    }
+
+    /** Tela ligou/desbloqueou: o app que ficou aberto volta sem gerar evento de janela. */
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) = enforceForeground()
+    }
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        registerReceiver(
+            screenReceiver,
+            IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_ON)
+                addAction(Intent.ACTION_USER_PRESENT)
+            },
+        )
+        handler.postDelayed(recheck, RECHECK_MS)
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(recheck)
+        runCatching { unregisterReceiver(screenReceiver) }
+        super.onDestroy()
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            event?.eventType != AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        ) return
         val pkg = event.packageName?.toString() ?: return
+        // Barra, diálogos do sistema e o teclado aparecem por cima do app sem tirá-lo
+        // da frente: não contam como troca de app.
+        if (pkg !in overlays()) foregroundPkg = pkg
         val blocked = shouldBlock(pkg)
         logUsage(pkg, blocked)
         if (blocked) goHome(pkg)
+    }
+
+    /** Reavalia o app que ficou na frente (horário pode ter fechado com ele aberto). */
+    private fun enforceForeground() {
+        val pkg = foregroundPkg ?: return
+        if (shouldBlock(pkg)) goHome(pkg)
     }
 
     /** Registra no histórico a abertura de um app "de verdade" (não o sistema/nós). */
@@ -76,24 +129,33 @@ class AppBlockerService : AccessibilityService() {
         pkg == PLAY_PACKAGE || pkg.contains("packageinstaller") || pkg == "com.android.packageinstaller"
 
     private fun goHome(pkg: String) {
+        // O HOME global sempre funciona (não sofre a restrição de abrir tela em segundo
+        // plano); em seguida abrimos o nosso launcher, que mostra o aviso de descanso.
+        performGlobalAction(GLOBAL_ACTION_HOME)
         runCatching {
             startActivity(
                 Intent(this, LauncherActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             )
         }
-        // Sair da frente não basta: o app continuaria vivo em segundo plano.
-        // Fora do horário, encerra todos os apps da criança; senão, só o bloqueado.
+        // Tirar da frente não encerra o app: ele ficaria em segundo plano e voltaria ao
+        // primeiro toque. Fora do horário, encerra todos os apps da criança; senão, só o bloqueado.
         if (checkRules(this).blocked) AppCloser.closeAllSoon(this)
         else AppCloser.closeOneSoon(this, pkg)
     }
 
     private fun essentials(): Set<String> {
-        val set = mutableSetOf("com.android.systemui", "android")
+        val set = overlays().toMutableSet()
         runCatching {
             getSystemService(TelecomManager::class.java)?.defaultDialerPackage
                 ?.let { set.add(it) }
         }
+        return set
+    }
+
+    /** Sistema (barra/diálogos) e teclado: janelas que sobrepõem o app da frente. */
+    private fun overlays(): Set<String> {
+        val set = mutableSetOf("com.android.systemui", "android")
         // O teclado (IME) atual nunca pode ser bloqueado, senão nenhum campo de texto
         // (PIN, busca, login) funciona — a tela fecharia ao abrir o teclado.
         runCatching {
@@ -105,6 +167,9 @@ class AppBlockerService : AccessibilityService() {
 
     companion object {
         const val PLAY_PACKAGE = "com.android.vending"
+
+        /** Intervalo da reavaliação do app em primeiro plano. */
+        private const val RECHECK_MS = 5_000L
 
         /** O serviço de bloqueio está ligado pelo responsável? */
         fun isEnabled(context: Context): Boolean {

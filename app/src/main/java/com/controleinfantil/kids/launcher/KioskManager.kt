@@ -10,6 +10,8 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.SharedPreferences
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.UserManager
 import android.provider.Settings
 import android.util.Log
@@ -67,6 +69,27 @@ class KioskManager(private val context: Context) {
             applyLockTaskFeatures()
         } catch (e: SecurityException) {
             Log.e(TAG, "setLockTaskPackages falhou", e)
+        }
+    }
+
+    /**
+     * Libera um pacote somente durante uma operação remota pontual, como abrir a
+     * Play Store para instalar um app pelo package id. Sem isso o Lock Task bloqueia
+     * o startActivity mesmo quando o AppBlockerService permite a Play.
+     */
+    fun allowTemporarily(pkg: String, durationMs: Long) {
+        if (!isOwner || pkg.isBlank()) return
+        try {
+            dpm.setLockTaskPackages(
+                admin,
+                (allowedPackages + context.packageName + pkg).toTypedArray(),
+            )
+            Handler(Looper.getMainLooper()).postDelayed(
+                { applyLockTaskAllowlist() },
+                durationMs.coerceAtLeast(1_000L),
+            )
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Não consegui liberar pacote temporário no Lock Task", e)
         }
     }
 
