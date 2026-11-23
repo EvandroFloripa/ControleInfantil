@@ -51,8 +51,9 @@ jobs:
           protocol: ftps
           port: 21
           local-dir: ./painel/
-          # Document root informado pela Hostinger para o subdomínio.
-          server-dir: /home/u425377146/domains/ea-systems.dev.br/public_html/painelpais/
+          # O usuário FTP é limitado à pasta do painel: o caminho é relativo a ela.
+          # Não usar caminho absoluto aqui, para não criar uma pasta duplicada.
+          server-dir: ./
 
       - name: Conferir o site
         run: |
