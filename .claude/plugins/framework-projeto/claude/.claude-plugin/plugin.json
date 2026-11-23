@@ -1,0 +1,7 @@
+{
+  "name": "framework-projeto",
+  "version": "0.2.0",
+  "description": "Framework de Projeto v5.4 para projetar, ajustar, prototipar, coordenar e executar lotes de software.",
+  "skills": "./skills/",
+  "commands": "./commands/"
+}
