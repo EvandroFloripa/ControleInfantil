@@ -81,7 +81,7 @@ function bootPanel() {
     },
   };
   const source = inlineClassicScript() +
-    '\n;globalThis.__panelTest = { state, renderDevices };';
+    '\n;globalThis.__panelTest = { state, renderDevices, selectDevice };';
   new vm.Script(source, { filename: 'painel/index.html:inline' }).runInNewContext(context);
   return { buttons, elements, fetchCalls, panel: context.__panelTest };
 }
@@ -158,6 +158,47 @@ test('initializes without external modules and wires the existing command handle
     p_device: 'device-1',
     p_type: 'lock_screen',
   });
+});
+
+test('announces toasts and secondary-tab content to assistive technology', () => {
+  assert.match(html, /id="toast"[^>]*role="status"[^>]*aria-live="polite"/);
+  for (const id of ['appsList', 'timeUsed', 'locationInfo', 'peopleList', 'usageList', 'historyList']) {
+    assert.match(html, new RegExp(`id="${id}"[^>]*aria-live="polite"`));
+  }
+});
+
+test('defines the loading, empty, error and denied states and honours reduced motion', () => {
+  for (const kind of ['loading', 'empty', 'error', 'denied']) {
+    assert.match(html, new RegExp(`\\[data-state="${kind}"\\]`));
+  }
+  assert.match(html, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test('shows a read-only notice to viewers in the apps and time tabs only', () => {
+  for (const id of ['appsPermission', 'timePermission']) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  const harness = bootPanel();
+  harness.panel.state.userId = 'viewer-1';
+  harness.panel.state.roles = { 'device-1': 'viewer' };
+  harness.panel.selectDevice({ id: 'device-1', label: 'Celular', last_seen: null });
+  assert.equal(harness.elements.get('appsPermission').classList.contains('hidden'), false);
+  assert.equal(harness.elements.get('timePermission').classList.contains('hidden'), false);
+
+  const guardian = bootPanel();
+  guardian.panel.state.userId = 'guardian-1';
+  guardian.panel.state.roles = { 'device-1': 'guardian' };
+  guardian.panel.selectDevice({ id: 'device-1', label: 'Celular', last_seen: null });
+  assert.equal(guardian.elements.get('appsPermission').classList.contains('hidden'), true);
+  assert.equal(guardian.elements.get('timePermission').classList.contains('hidden'), true);
+});
+
+test('marks the apps list as loading before the device replies', () => {
+  const harness = bootPanel();
+  harness.panel.state.userId = 'guardian-1';
+  harness.panel.state.roles = { 'device-1': 'guardian' };
+  harness.panel.selectDevice({ id: 'device-1', label: 'Celular', last_seen: null });
+  assert.equal(harness.elements.get('appsList').getAttribute('data-state'), 'loading');
 });
 
 test('renders viewer device cards without an unlink control', () => {
