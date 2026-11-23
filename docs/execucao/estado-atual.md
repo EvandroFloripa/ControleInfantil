@@ -95,3 +95,17 @@ Conclusão: evidência parcial. **Aceite visual de LOTE-05 e da Task 2 do LOTE-0
 - Sem execução contra Supabase real nesta sessão.
 - Sem teste em aparelho Android físico (Device Owner, Acessibilidade, localização, WebRTC, TURN, reboot).
 - Deploy externo do painel não validado.
+
+## 9. Fila de ajustes — coordenação de 2026-11-23
+
+Feito nesta rodada (autônomo, com compilação da versão commitada):
+
+- **AJ-01** Bloqueio por tempo encerra os apps da criança: commit `3841e66`. Teste no aparelho pendente.
+
+Pendente, sem execução autônoma:
+
+- **AJ-02 Trabalho de outra sessão no disco** (`KioskManager`, `InstallAllow`, `Command`, `CommandService` no restante, configuração de acessibilidade, SQL `apps.sql`, `signaling.sql`, `timerules.sql`, `RemoteUninstaller`, `UninstallResultReceiver`, `painel/device-actions.js`). Não commitado: falta dono e revisão. Decisão humana.
+- **AJ-03 Aceite visual**: área do responsável, launcher, tela de bloqueio e protótipos (aplicativos, tempo/localização/histórico, app do celular, comandos). Decisão humana.
+- **AJ-04 Teste no aparelho**: linha de tempo restante, tela de bloqueio, encerramento dos apps (por horário e por tempo), permissão de encerramento. Exige celular conectado e controle ativo.
+- **AJ-05 Banco**: aplicar `supabase/apps.sql` no Supabase para o tipo `uninstall_app`. Ação humana no projeto Supabase.
+- **AJ-06 Limites conhecidos do encerramento**: apps com serviço em primeiro plano podem continuar vivos; miniaturas em recentes não são removidas. Verificar no aparelho.
