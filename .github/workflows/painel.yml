@@ -52,7 +52,7 @@ jobs:
           port: 21
           local-dir: ./painel/
           # Document root informado pela Hostinger para o subdomínio.
-          server-dir: /home/u425377146/domains/ea-systems.dev.br/painelpais/
+          server-dir: /home/u425377146/domains/ea-systems.dev.br/public_html/painelpais/
 
       - name: Conferir o site
         run: |
