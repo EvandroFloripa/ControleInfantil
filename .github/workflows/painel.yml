@@ -32,20 +32,18 @@ jobs:
         env:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_HOST: ${{ secrets.FTP_HOST }}
         run: |
-          if [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then
-            echo "::error::Faltam FTP_USERNAME ou FTP_PASSWORD."
+          if [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ] || [ -z "$FTP_HOST" ]; then
+            echo "::error::Faltam FTP_USERNAME, FTP_PASSWORD ou FTP_HOST."
             exit 1
           fi
-          host=151.106.97.46
-          echo "::add-mask::$host"
-          echo "FTP_SERVER: nome (${#host} caracteres); resolve? $(getent hosts "$host" >/dev/null && echo sim || echo NAO)"
-          echo "FTP_HOST_IPV4=$host" >> "$GITHUB_ENV"
+          echo "FTP_HOST_SECRET=$FTP_HOST" >> "$GITHUB_ENV"
 
       - name: Enviar para a Hostinger
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
-          server: ${{ env.FTP_HOST_IPV4 }}
+          server: ${{ env.FTP_HOST_SECRET }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
