@@ -40,12 +40,12 @@ jobs:
           host=151.106.97.46
           echo "::add-mask::$host"
           echo "FTP_SERVER: nome (${#host} caracteres); resolve? $(getent hosts "$host" >/dev/null && echo sim || echo NAO)"
-          echo "FTP_HOST=$host" >> "$GITHUB_ENV"
+          echo "FTP_HOST_IPV4=$host" >> "$GITHUB_ENV"
 
       - name: Enviar para a Hostinger
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
-          server: ${{ env.FTP_HOST }}
+          server: ${{ env.FTP_HOST_IPV4 }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
@@ -54,6 +54,8 @@ jobs:
           # O usuário FTP é limitado à pasta do painel: o caminho é relativo a ela.
           # Não usar caminho absoluto aqui, para não criar uma pasta duplicada.
           server-dir: ./
+          timeout: 120000
+          log-level: verbose
 
       - name: Conferir o site
         run: |
