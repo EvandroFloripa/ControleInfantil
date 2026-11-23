@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Selo de status (OK, Ativar, Falta). A cor de fundo é trocada em código. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#E3F6F2" />
+    <corners android:radius="999dp" />
+</shape>

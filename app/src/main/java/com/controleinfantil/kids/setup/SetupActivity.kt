@@ -9,8 +9,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import android.view.View
 import android.widget.Toast
-import android.widget.Button
 import android.widget.TextView
+import com.controleinfantil.kids.schedule.TimeRules
+import com.controleinfantil.kids.schedule.UsageTracker
 import androidx.lifecycle.lifecycleScope
 import com.controleinfantil.kids.R
 import com.controleinfantil.kids.admin.DeviceAdmin
@@ -39,24 +40,24 @@ class SetupActivity : GuardianActivity() {
         policy = PolicyManager(this)
         client = SupabaseClient(this)
 
-        findViewById<Button>(R.id.btnEnableAdmin).setOnClickListener { requestDeviceAdmin() }
-        findViewById<Button>(R.id.btnPairingCode).setOnClickListener { generatePairingCode() }
-        findViewById<Button>(R.id.btnChooseApps).setOnClickListener {
+        findViewById<View>(R.id.btnEnableAdmin).setOnClickListener { requestDeviceAdmin() }
+        findViewById<View>(R.id.btnPairingCode).setOnClickListener { generatePairingCode() }
+        findViewById<View>(R.id.btnChooseApps).setOnClickListener {
             startActivity(Intent(this, AppPickerActivity::class.java))
         }
-        findViewById<Button>(R.id.btnSchedule).setOnClickListener {
+        findViewById<View>(R.id.btnSchedule).setOnClickListener {
             startActivity(Intent(this, ScheduleActivity::class.java))
         }
-        findViewById<Button>(R.id.btnReleaseDevice).setOnClickListener { confirmReleaseDevice() }
-        findViewById<Button>(R.id.btnUnlockDevice).setOnClickListener { unlockForMaintenance() }
-        findViewById<Button>(R.id.btnDisableControl).setOnClickListener { confirmDisableControl() }
-        findViewById<Button>(R.id.btnRelock).setOnClickListener {
+        findViewById<View>(R.id.btnReleaseDevice).setOnClickListener { confirmReleaseDevice() }
+        findViewById<View>(R.id.btnUnlockDevice).setOnClickListener { unlockForMaintenance() }
+        findViewById<View>(R.id.btnDisableControl).setOnClickListener { confirmDisableControl() }
+        findViewById<View>(R.id.btnRelock).setOnClickListener {
             GuardianArea.resumeBlocking(this)
             Toast.makeText(this, R.string.relock_toast, Toast.LENGTH_SHORT).show()
             refreshStatus()
         }
-        findViewById<Button>(R.id.btnOverlay).setOnClickListener { requestOverlay() }
-        findViewById<Button>(R.id.btnAccessibility).setOnClickListener {
+        findViewById<View>(R.id.btnOverlay).setOnClickListener { requestOverlay() }
+        findViewById<View>(R.id.btnAccessibility).setOnClickListener {
             startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         ensureRuntimePermissions()
@@ -123,46 +124,104 @@ class SetupActivity : GuardianActivity() {
     }
 
     private fun refreshStatus() {
-        val admin = if (policy.isAdminActive) "✅ ativo" else "❌ inativo"
-        val owner = if (policy.isDeviceOwner) "✅ ativo" else "❌ inativo (ver ADB)"
         val disabled = GuardianArea.isControlDisabled()
-        val status = getString(
-            R.string.status_fmt, admin, owner,
-            com.controleinfantil.kids.BuildConfig.VERSION_NAME,
+        val rules = TimeRules.load(this)
+        val usado = UsageTracker.usedMinutesToday(this)
+        val liberados = KioskManager(this).allowedPackages.size
+
+        // Resumo do topo: o que o app sabe sobre o aparelho agora.
+        findViewById<TextView>(R.id.sumControl).setText(
+            if (disabled) R.string.summary_control_off else R.string.summary_control_on
         )
-        findViewById<TextView>(R.id.status).text =
-            if (disabled) getString(R.string.control_disabled_status) + "\n\n" + status
-            else status
-        findViewById<View>(R.id.btnReleaseDevice).visibility =
-            if (policy.isDeviceOwner) View.VISIBLE else View.GONE
-        // Botão de sobreposição só quando falta a permissão (e não é Device Owner).
+        findViewById<TextView>(R.id.sumUsage).text =
+            if (rules.dailyLimitMinutes > 0) "$usado de ${rules.dailyLimitMinutes} min" else "$usado min"
+        findViewById<TextView>(R.id.sumSchedule).text =
+            if (rules.enabled) "${rules.startText} às ${rules.endText}"
+            else getString(R.string.schedule_off)
+        findViewById<TextView>(R.id.sumApps).text = liberados.toString()
+
+        // Estado de controle desativado aparece como aviso no topo da lista.
+        findViewById<TextView>(R.id.status).apply {
+            text = getString(R.string.control_disabled_status)
+            visibility = if (disabled) View.VISIBLE else View.GONE
+        }
+
+        // Permissões: linha sempre visível, com selo e subtítulo de estado.
         val overlayOk = policy.isDeviceOwner ||
             android.provider.Settings.canDrawOverlays(this)
-        findViewById<View>(R.id.btnOverlay).visibility =
-            if (overlayOk) View.GONE else View.VISIBLE
-        // Bloqueio por Acessibilidade: botão some quando já está ligado (ou é DO).
+        setPill(R.id.overlayPill, overlayOk, R.string.pill_check)
+        findViewById<TextView>(R.id.overlaySub).setText(
+            if (overlayOk) R.string.sub_overlay_on else R.string.sub_overlay_off
+        )
         val blockOk = policy.isDeviceOwner ||
             com.controleinfantil.kids.block.AppBlockerService.isEnabled(this)
-        findViewById<View>(R.id.btnAccessibility).visibility =
-            if (blockOk) View.GONE else View.VISIBLE
-        findViewById<View>(R.id.btnRelock).visibility =
-            if (GuardianArea.isPaused()) View.VISIBLE else View.GONE
-        findViewById<Button>(R.id.btnRelock).setText(
-            if (disabled) R.string.enable_control_button else R.string.relock_button
+        setPill(R.id.accessPill, blockOk, R.string.pill_check)
+        findViewById<TextView>(R.id.accessSub).setText(
+            if (blockOk) R.string.sub_access_on else R.string.sub_access_off
         )
+        setPill(R.id.adminPill, policy.isAdminActive, R.string.pill_missing)
+        findViewById<TextView>(R.id.adminSub).setText(
+            if (policy.isAdminActive) R.string.sub_admin_on else R.string.sub_admin_off
+        )
+
+        // Manutenção: liberar e desligar somem quando o controle já está desativado.
         findViewById<View>(R.id.btnUnlockDevice).visibility =
             if (disabled) View.GONE else View.VISIBLE
         findViewById<View>(R.id.btnDisableControl).visibility =
             if (disabled) View.GONE else View.VISIBLE
+        val relock = GuardianArea.isPaused()
+        findViewById<View>(R.id.btnRelock).visibility = if (relock) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.divRelock).visibility = if (relock) View.VISIBLE else View.GONE
+        findViewById<TextView>(R.id.relockTitle).setText(
+            if (disabled) R.string.enable_control_button else R.string.relock_button
+        )
 
-        val id = DeviceIdentity.id(this)
-        findViewById<TextView>(R.id.deviceId).text =
-            if (id != null) getString(R.string.device_id_fmt, id)
-            else getString(R.string.device_not_registered)
-
-        val liberados = KioskManager(this).allowedPackages.size
+        // Uso: apps liberados e horário resumido.
         findViewById<TextView>(R.id.allowedSummary).text =
-            resources.getQuantityString(R.plurals.picker_count, liberados, liberados)
+            getString(R.string.apps_count_short, liberados)
+        findViewById<TextView>(R.id.scheduleSub).text = if (rules.enabled) {
+            val limite = if (rules.dailyLimitMinutes > 0)
+                getString(R.string.schedule_limit_per_day, rules.dailyLimitMinutes)
+            else getString(R.string.schedule_limit_none)
+            getString(R.string.schedule_summary, rules.startText, rules.endText, limite)
+        } else getString(R.string.schedule_off)
+
+        // Zona de risco: só aparece como Device Owner (o botão de liberar é o único item).
+        val dono = policy.isDeviceOwner
+        findViewById<View>(R.id.dangerSection).visibility = if (dono) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.dangerZone).visibility = if (dono) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.btnReleaseDevice).visibility = if (dono) View.VISIBLE else View.GONE
+
+        // Detalhes técnicos: aparelho registrado, administrador e versão do app.
+        val admin = if (policy.isAdminActive) "ativo" else "inativo"
+        val owner = if (dono) "ativo" else "inativo (ver ADB)"
+        val status = getString(
+            R.string.status_fmt, admin, owner,
+            com.controleinfantil.kids.BuildConfig.VERSION_NAME,
+        )
+        val id = DeviceIdentity.id(this)
+        val linhaAparelho = if (id != null) getString(R.string.device_id_fmt, id)
+            else getString(R.string.device_not_registered)
+        findViewById<TextView>(R.id.deviceId).text = linhaAparelho + "\n" + status
+    }
+
+    /** Selo de status: verde se OK, âmbar se precisa ativar, vermelho se falta. */
+    private fun setPill(id: Int, ok: Boolean, textoSeNao: Int) {
+        val pill = findViewById<TextView>(id)
+        pill.setText(if (ok) R.string.pill_ok else textoSeNao)
+        pill.setBackgroundResource(
+            if (ok) R.drawable.bg_pill else if (textoSeNao == R.string.pill_missing) R.drawable.bg_pill_off
+            else R.drawable.bg_pill_warn
+        )
+        pill.setTextColor(
+            android.graphics.Color.parseColor(
+                when {
+                    ok -> "#075A58"
+                    textoSeNao == R.string.pill_missing -> "#B00020"
+                    else -> "#8A520A"
+                }
+            )
+        )
     }
 
     /**

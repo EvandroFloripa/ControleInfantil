@@ -22,6 +22,8 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.controleinfantil.kids.R
 import com.controleinfantil.kids.remote.CommandService
+import com.controleinfantil.kids.schedule.TimeRules
+import com.controleinfantil.kids.schedule.UsageTracker
 import com.controleinfantil.kids.schedule.Verdict
 import com.controleinfantil.kids.schedule.checkRules
 import com.controleinfantil.kids.setup.GuardianArea
@@ -83,6 +85,7 @@ class LauncherActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 while (isActive) {
                     delay(RULES_RECHECK_MS)
+                    updateRemainingHint()
                     if (currentVerdict().blocked != showingBlocked ||
                         GuardianArea.isPaused() != showingFree
                     ) refreshApps()
@@ -132,7 +135,27 @@ class LauncherActivity : AppCompatActivity() {
             updateHomePrompt()
         }
 
+    /**
+     * Mostra quanto tempo ainda falta hoje e até que horas pode usar. Não aparece
+     * quando não há limite, quando o controle está desativado ou quando o responsável
+     * liberou tempo extra (aí o número deixaria de ser verdadeiro).
+     */
+    private fun updateRemainingHint() {
+        val hint = findViewById<TextView>(R.id.remainingHint)
+        val rules = TimeRules.load(this)
+        val now = System.currentTimeMillis()
+        val liberado = GuardianArea.isPaused() || TimeRules.overrideUntil(this) > now
+        if (!rules.enabled || rules.dailyLimitMinutes <= 0 || liberado) {
+            hint.visibility = View.GONE
+            return
+        }
+        val restam = (rules.dailyLimitMinutes - UsageTracker.usedMinutesToday(this)).coerceAtLeast(0)
+        hint.text = getString(R.string.launcher_remaining, restam, rules.endText)
+        hint.visibility = View.VISIBLE
+    }
+
     private fun refreshApps() {
+        updateRemainingHint()
         // Fora do horário, nem carrega a lista: a criança vê o aviso de descanso.
         val verdict = currentVerdict()
         showingBlocked = verdict.blocked
@@ -142,18 +165,24 @@ class LauncherActivity : AppCompatActivity() {
         showingFree = free
         findViewById<View>(R.id.disabledHint).visibility =
             if (GuardianArea.isControlDisabled()) View.VISIBLE else View.GONE
+        val blockedPanel = findViewById<View>(R.id.blockedPanel)
+        val blockedTitle = findViewById<TextView>(R.id.blockedTitle)
         val blockedView = findViewById<TextView>(R.id.blockedHint)
         val emptyView = findViewById<TextView>(R.id.emptyHint)
         val guardianBtn = findViewById<View>(R.id.btnGuardianBlocked)
         if (verdict.blocked) {
-            blockedView.text = blockedMessage(verdict)
-            blockedView.visibility = View.VISIBLE
+            blockedTitle.text = getString(
+                if (verdict is Verdict.BudgetSpent) R.string.blocked_title_budget
+                else R.string.blocked_title_rest
+            )
+            blockedView.text = blockedMessage(verdict) + "\n\n" + getString(R.string.blocked_back_later)
+            blockedPanel.visibility = View.VISIBLE
             guardianBtn.visibility = View.VISIBLE
             emptyView.visibility = View.GONE
             recycler.visibility = View.GONE
             return
         }
-        blockedView.visibility = View.GONE
+        blockedPanel.visibility = View.GONE
         guardianBtn.visibility = View.GONE
         recycler.visibility = View.VISIBLE
 

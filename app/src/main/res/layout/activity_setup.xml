@@ -1,155 +1,356 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Área do responsável no formato do protótipo aprovado: resumo, grupos de cartões com
+     linhas (ícone, título, detalhe e selo), Zona de risco isolada. Os IDs são os usados
+     por SetupActivity. Cada linha é um LinearLayout clicável; o comportamento não muda. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="24dp">
+    android:background="#F2F6F9"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <TextView
+        <!-- Cabeçalho -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/setup_title"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:paddingBottom="16dp" />
+            android:orientation="vertical"
+            android:background="#122C40"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setup_title"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Você está autenticado como responsável"
+                android:textColor="#D0DEE8"
+                android:textSize="12sp"
+                android:paddingTop="4dp" />
+        </LinearLayout>
+
+        <!-- Resumo do aparelho -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="14dp"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/summary_control"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:textColor="#5D6E80" />
+
+                    <TextView
+                        android:id="@+id/sumControl"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#142538" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/summary_usage"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:textColor="#5D6E80" />
+
+                    <TextView
+                        android:id="@+id/sumUsage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#142538" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/summary_schedule"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:textColor="#5D6E80" />
+
+                    <TextView
+                        android:id="@+id/sumSchedule"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#142538" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/summary_apps"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:textColor="#5D6E80" />
+
+                    <TextView
+                        android:id="@+id/sumApps"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#142538" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:paddingBottom="16dp" />
+            android:textSize="13sp"
+            android:textColor="#B00020"
+            android:paddingTop="12dp"
+            android:visibility="gone" />
 
+        <!-- Aparelho -->
+        <TextView style="@style/SetupSection" android:text="@string/section_device" />
+        <LinearLayout style="@style/SetupCard">
+
+            <LinearLayout android:id="@+id/btnAccessibility" style="@style/SetupRow">
+                <TextView style="@style/SetupIcon" android:text="♿" />
+                <LinearLayout style="@style/SetupText">
+                    <TextView style="@style/SetupTitle" android:text="@string/accessibility_button" />
+                    <TextView android:id="@+id/accessSub" style="@style/SetupSub" />
+                </LinearLayout>
+                <TextView android:id="@+id/accessPill" style="@style/SetupPill" />
+                <TextView style="@style/SetupChevron" />
+            </LinearLayout>
+            <View style="@style/SetupDivider" />
+
+            <LinearLayout android:id="@+id/btnOverlay" style="@style/SetupRow">
+                <TextView style="@style/SetupIcon" android:text="🪟" />
+                <LinearLayout style="@style/SetupText">
+                    <TextView style="@style/SetupTitle" android:text="@string/overlay_button" />
+                    <TextView android:id="@+id/overlaySub" style="@style/SetupSub" />
+                </LinearLayout>
+                <TextView android:id="@+id/overlayPill" style="@style/SetupPill" />
+                <TextView style="@style/SetupChevron" />
+            </LinearLayout>
+            <View style="@style/SetupDivider" />
+
+            <LinearLayout android:id="@+id/btnEnableAdmin" style="@style/SetupRow">
+                <TextView style="@style/SetupIcon" android:text="🛡️" />
+                <LinearLayout style="@style/SetupText">
+                    <TextView style="@style/SetupTitle" android:text="@string/enable_admin" />
+                    <TextView android:id="@+id/adminSub" style="@style/SetupSub" />
+                </LinearLayout>
+                <TextView android:id="@+id/adminPill" style="@style/SetupPill" />
+                <TextView style="@style/SetupChevron" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Uso -->
+        <TextView style="@style/SetupSection" android:text="@string/section_usage" />
+        <LinearLayout style="@style/SetupCard">
+
+            <LinearLayout android:id="@+id/btnChooseApps" style="@style/SetupRow">
+                <TextView style="@style/SetupIcon" android:text="📱" />
+                <LinearLayout style="@style/SetupText">
+                    <TextView style="@style/SetupTitle" android:text="@string/choose_apps" />
+                    <TextView android:id="@+id/allowedSummary" style="@style/SetupSub" />
+                </LinearLayout>
+                <TextView style="@style/SetupChevron" />
+            </LinearLayout>
+            <View style="@style/SetupDivider" />
+
+            <LinearLayout android:id="@+id/btnSchedule" style="@style/SetupRow">
+                <TextView style="@style/SetupIcon" android:text="⏱️" />
+                <LinearLayout style="@style/SetupText">
+                    <TextView style="@style/SetupTitle" android:text="@string/schedule_button" />
+                    <TextView android:id="@+id/scheduleSub" style="@style/SetupSub" />
+                </LinearLayout>
+                <TextView style="@style/SetupChevron" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Manutenção -->
+        <TextView style="@style/SetupSection" android:text="@string/section_maintenance" />
+        <LinearLayout style="@style/SetupCard">
+
+            <LinearLayout android:id="@+id/btnUnlockDevice" style="@style/SetupRow">
+                <TextView style="@style/SetupIcon" android:text="🔓" />
+                <LinearLayout style="@style/SetupText">
+                    <TextView style="@style/SetupTitle" android:text="@string/unlock_title" />
+                    <TextView style="@style/SetupSub" android:text="@string/sub_unlock" />
+                </LinearLayout>
+                <TextView style="@style/SetupChevron" />
+            </LinearLayout>
+            <View android:id="@+id/divRelock" style="@style/SetupDivider" android:visibility="gone" />
+
+            <LinearLayout android:id="@+id/btnRelock" style="@style/SetupRow" android:visibility="gone">
+                <TextView style="@style/SetupIcon" android:text="🔒" />
+                <LinearLayout style="@style/SetupText">
+                    <TextView android:id="@+id/relockTitle" style="@style/SetupTitle" android:text="@string/relock_button" />
+                    <TextView android:id="@+id/relockSub" style="@style/SetupSub" android:text="@string/sub_relock" />
+                </LinearLayout>
+                <TextView style="@style/SetupChevron" />
+            </LinearLayout>
+            <View style="@style/SetupDivider" />
+
+            <!-- Tudo liberado até reativar; continua Device Owner (não é "remover"). -->
+            <LinearLayout android:id="@+id/btnDisableControl" style="@style/SetupRow">
+                <TextView style="@style/SetupIcon" android:text="⏸️" />
+                <LinearLayout style="@style/SetupText">
+                    <TextView style="@style/SetupTitle" android:text="@string/disable_title" />
+                    <TextView style="@style/SetupSub" android:text="@string/sub_disable" />
+                </LinearLayout>
+                <TextView style="@style/SetupChevron" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Pareamento -->
+        <TextView style="@style/SetupSection" android:text="@string/section_pairing" />
+        <LinearLayout style="@style/SetupCard">
+
+            <LinearLayout android:id="@+id/btnPairingCode" style="@style/SetupRow">
+                <TextView style="@style/SetupIcon" android:text="🔑" />
+                <LinearLayout style="@style/SetupText">
+                    <TextView style="@style/SetupTitle" android:text="@string/pairing_button" />
+                    <TextView style="@style/SetupSub" android:text="@string/pairing_sub" />
+                </LinearLayout>
+                <TextView style="@style/SetupChevron" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/pairingCode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:background="@drawable/bg_code_box"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.15"
+                android:textColor="#142538"
+                android:textIsSelectable="true"
+                android:paddingVertical="14dp"
+                android:layout_marginTop="10dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setup_hint"
+                android:textSize="12sp"
+                android:textColor="#5D6E80"
+                android:paddingTop="10dp" />
+        </LinearLayout>
+
+        <!-- Zona de risco: isolada, só aparece como Device Owner. -->
+        <TextView
+            android:id="@+id/dangerSection"
+            style="@style/SetupSection"
+            android:text="@string/section_danger"
+            android:textColor="#B00020" />
+        <LinearLayout
+            android:id="@+id/dangerZone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_danger_dashed"
+            android:padding="6dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/danger_hint"
+                android:textSize="12sp"
+                android:textColor="#5D6E80"
+                android:paddingHorizontal="8dp"
+                android:paddingTop="6dp" />
+
+            <LinearLayout android:id="@+id/btnReleaseDevice" style="@style/SetupRow" android:visibility="gone">
+                <TextView style="@style/SetupIcon" android:text="⛔" android:background="#FBE9EC" />
+                <LinearLayout style="@style/SetupText">
+                    <TextView style="@style/SetupTitle" android:text="@string/release_button" android:textColor="#B00020" />
+                    <TextView style="@style/SetupSub" android:text="@string/sub_release" />
+                </LinearLayout>
+                <TextView style="@style/SetupChevron" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Detalhes técnicos: versão, aparelho e estado do administrador. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/status_details"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textAllCaps="true"
+            android:textColor="#5D6E80"
+            android:paddingTop="24dp"
+            android:paddingBottom="4dp" />
         <TextView
             android:id="@+id/deviceId"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
+            android:textSize="12sp"
+            android:textColor="#5D6E80"
             android:textIsSelectable="true"
             android:paddingBottom="24dp" />
-
-        <Button
-            android:id="@+id/btnOverlay"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="@string/overlay_button"
-            android:visibility="gone" />
-
-        <Button
-            android:id="@+id/btnUnlockDevice"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="@string/unlock_device_button" />
-
-        <!-- Tudo liberado até reativar; continua Device Owner (não é "remover"). -->
-        <Button
-            android:id="@+id/btnDisableControl"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="@string/disable_control_button" />
-
-        <Button
-            android:id="@+id/btnRelock"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="@string/relock_button"
-            android:visibility="gone" />
-
-        <Button
-            android:id="@+id/btnAccessibility"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="@string/accessibility_button"
-            android:visibility="gone" />
-
-        <Button
-            android:id="@+id/btnEnableAdmin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/enable_admin" />
-
-        <Button
-            android:id="@+id/btnChooseApps"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/choose_apps"
-            android:layout_marginTop="12dp" />
-
-        <Button
-            android:id="@+id/btnSchedule"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/schedule_button"
-            android:layout_marginTop="8dp" />
-
-        <TextView
-            android:id="@+id/allowedSummary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="13sp"
-            android:paddingTop="6dp" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#DDDDDD"
-            android:layout_marginVertical="24dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/pairing_title"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:paddingBottom="8dp" />
-
-        <Button
-            android:id="@+id/btnPairingCode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/pairing_button" />
-
-        <TextView
-            android:id="@+id/pairingCode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.15"
-            android:textIsSelectable="true"
-            android:paddingVertical="12dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/setup_hint"
-            android:textSize="13sp"
-            android:paddingTop="24dp" />
-
-        <!-- Só aparece como Device Owner: tira as travas para poder desinstalar. -->
-        <Button
-            android:id="@+id/btnReleaseDevice"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/release_button"
-            android:textColor="#B00020"
-            android:visibility="gone" />
 
     </LinearLayout>
 </ScrollView>
