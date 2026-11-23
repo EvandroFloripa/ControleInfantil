@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Protótipo — Comandos para pais (dados fictícios)</title>
+<style>
+  :root { --ink:#142538; --muted:#5d6e80; --border:#dce5ec; --surface:#fff; --soft:#f6f9fb;
+    --primary:#0a7c76; --primary-dark:#075a58; --accent:#42c8b5; --warn:#8a520a; --warn-bg:#fff6e6;
+    --danger:#b83f50; --danger-bg:#fbe9ec; --ok-bg:#e3f6f2; --focus:#63e0cf; --radius:16px; --radius-sm:11px; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Inter, ui-sans-serif, system-ui, "Segoe UI", sans-serif; color:var(--ink); background:#eef3f7; overflow-x:hidden; }
+  button, input, select, textarea { font: inherit; }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .proto-bar { background:#1f2d3a; color:#dbe6ee; padding:10px 16px; font-size:13px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .proto-bar b { margin-right:6px; }
+  .proto-bar button { background:#34495e; color:#fff; border:0; border-radius:8px; padding:6px 10px; cursor:pointer; }
+  .proto-bar button[aria-pressed="true"] { background: var(--accent); color:#103b42; font-weight:700; }
+  header.top { max-width: 1180px; margin: 0 auto; padding: 22px 16px 6px; }
+  header.top h1 { margin:0; font-size:22px; }
+  header.top p { margin:6px 0 0; color:var(--muted); font-size:14px; line-height:1.5; }
+  .grid { max-width: 1180px; margin: 0 auto; padding: 14px 16px 60px; display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: 0 10px 26px rgba(25,50,70,.08); display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .card.fora { border-style: dashed; background: #fbfcfd; }
+  .card-head { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+  .card h2 { margin:0; font-size:16px; }
+  .card .desc { margin:0; color:var(--muted); font-size:13px; line-height:1.45; }
+  .tags { display:flex; gap:6px; flex-wrap:wrap; }
+  .tag { font-size:11px; font-weight:800; border-radius:999px; padding:3px 9px; white-space:nowrap; }
+  .tag.alta { background: var(--ok-bg); color: var(--primary-dark); }
+  .tag.media { background: var(--warn-bg); color: var(--warn); }
+  .tag.baixa { background: var(--danger-bg); color: var(--danger); }
+  .tag.risco-baixo { background:#eef2f5; color:var(--muted); }
+  .tag.risco-medio { background: var(--warn-bg); color: var(--warn); }
+  .tag.risco-alto { background: var(--danger-bg); color: var(--danger); }
+  .sub { font-size:11px; text-transform:uppercase; letter-spacing:.05em; font-weight:800; color:var(--muted); margin-top:4px; }
+
+  /* Mock do painel (responsável) */
+  .panel-mock { background: var(--soft); border:1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; display:flex; flex-direction:column; gap:8px; }
+  .panel-mock .btn { background: var(--primary); color:#fff; border:0; border-radius:9px; padding:9px 12px; font-weight:700; cursor:pointer; font-size:13px; }
+  .panel-mock .btn.ghost { background:#fff; color:var(--primary); border:1px solid var(--border); }
+  .panel-mock .btn:disabled { opacity:.45; cursor:default; }
+  .row { display:flex; justify-content:space-between; gap:8px; align-items:center; font-size:13px; }
+  .muted { color: var(--muted); font-size:12px; }
+  input[type=time], select, textarea, input[type=text] { padding:8px 9px; border:1px solid var(--border); border-radius:9px; background:#fff; font-size:13px; width:100%; }
+  .days { display:grid; grid-template-columns: repeat(7, 1fr); gap:4px; }
+  .day { text-align:center; font-size:11px; padding:6px 0; border-radius:8px; background:#fff; border:1px solid var(--border); font-weight:700; color:var(--muted); }
+  .day.on { background: var(--ok-bg); border-color: var(--accent); color: var(--primary-dark); }
+  .bars { display:flex; align-items:flex-end; gap:6px; height:70px; padding-top:4px; }
+  .bars i { flex:1; background: linear-gradient(180deg, var(--accent), var(--primary)); border-radius:6px 6px 2px 2px; }
+  .bar-lbl { display:flex; justify-content:space-between; font-size:10px; color:var(--muted); }
+  .bat { height:12px; background:#e3ecf1; border-radius:8px; overflow:hidden; }
+  .bat i { display:block; height:100%; background:linear-gradient(90deg,var(--accent),var(--primary)); }
+  .log { font-size:12px; border-top:1px solid #e6edf2; padding:6px 0; color:var(--ink); }
+  .log span { color: var(--danger); font-weight:700; }
+  .map { height:90px; border-radius:9px; background:#e6eef3; position:relative; overflow:hidden; border:1px solid var(--border); }
+  .map i { position:absolute; left:50%; top:50%; width:64px; height:64px; margin:-32px 0 0 -32px; border-radius:50%; background: rgba(10,124,118,.18); border:2px dashed var(--primary); }
+  .map b { position:absolute; left:50%; top:50%; width:10px; height:10px; margin:-5px 0 0 -5px; background:var(--primary); border-radius:50%; }
+  .off-note { font-size:12px; color: var(--warn); background: var(--warn-bg); border-radius: var(--radius-sm); padding:8px 10px; line-height:1.45; }
+
+  /* Mock da criança */
+  .kid-mock { background: linear-gradient(160deg,#2d6f8f,#17384d); color:#fff; border-radius: var(--radius-sm); padding: 12px; font-size:13px; line-height:1.45; }
+  .kid-mock .banner { background: rgba(255,255,255,.18); border-radius: 10px; padding: 9px 10px; margin-top: 6px; }
+  .kid-mock .pill { display:inline-block; background: rgba(255,255,255,.2); border-radius:999px; padding:4px 10px; font-size:12px; font-weight:700; margin-top:6px; }
+  .kid-label { font-size:10px; text-transform:uppercase; letter-spacing:.06em; font-weight:800; opacity:.75; }
+
+  .fora-box { border: 1px dashed #c9d6df; border-radius: var(--radius-sm); padding: 14px; text-align:center; color:var(--muted); font-size:13px; line-height:1.5; }
+
+  @media (max-width: 420px) { .grid { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="proto-bar" role="group" aria-label="Controles do protótipo">
+  <b>Protótipo · dados fictícios</b>
+  <button type="button" data-filtro="todos" aria-pressed="true">Todos</button>
+  <button type="button" data-filtro="proximos" aria-pressed="false">Próximos passos</button>
+  <button type="button" data-filtro="fora" aria-pressed="false">Fora desta fase</button>
+</div>
+
+<header class="top">
+  <h1>Comandos para pais — proposta visual</h1>
+  <p>Cada cartão mostra a tela do responsável (painel) e o que a criança vê no aparelho. Os cartões tracejados são itens que não recomendo nesta fase; o desenho serve para discussão, não para implementação.</p>
+</header>
+
+<main class="grid" id="grid"></main>
+
+<script>
+const CARTOES = [
+  { id:'tocar', fase:'proximos', titulo:'Tocar o aparelho', viab:'alta', risco:'baixo',
+    desc:'Faz o celular tocar em volume alto por alguns segundos, para achar o aparelho na casa.',
+    painel:`<button class="btn" type="button" data-acao="tocar">🔔 Tocar aparelho por 10 s</button>
+      <p class="muted" style="margin:0">Dica: a criança vê uma notificação enquanto toca.</p>`,
+    crianca:`<div class="kid-label">Notificação</div><div class="banner">🔔 Tocando: sua mãe está procurando o celular.</div>` },
+  { id:'mensagem', fase:'proximos', titulo:'Mensagem na tela da criança', viab:'alta', risco:'baixo',
+    desc:'Envia um aviso curto que aparece na tela do aparelho, sem precisar ligar.',
+    painel:`<textarea rows="2" maxlength="120" aria-label="Mensagem">Hora do jantar, venha!</textarea>
+      <div class="row"><span class="muted">28/120</span><button class="btn" type="button">Enviar aviso</button></div>`,
+    crianca:`<div class="kid-label">Aviso do responsável</div><div class="banner">Hora do jantar, venha!</div>` },
+  { id:'bateria', fase:'proximos', titulo:'Bateria e status no painel', viab:'alta', risco:'baixo',
+    desc:'Mostra a bateria do aparelho e se está carregando, no painel.',
+    painel:`<div class="row"><strong>Bateria</strong><span>42% · não está carregando</span></div>
+      <div class="bat" role="img" aria-label="Bateria 42%"><i style="width:42%"></i></div>
+      <p class="muted" style="margin:0">Aviso automático abaixo de 15%.</p>`,
+    crianca:`<div class="kid-label">Sem aviso visível</div><p class="muted" style="color:#dbe6ee;margin:0">A criança não precisa ver a bateria do responsável.</p>` },
+  { id:'relatorio', fase:'proximos', titulo:'Relatório semanal', viab:'alta', risco:'baixo',
+    desc:'Resumo da semana: tempo de uso por dia e bloqueios, enviado todo domingo.',
+    painel:`<div class="bars" role="img" aria-label="Tempo de uso por dia"><i style="height:40%"></i><i style="height:65%"></i><i style="height:55%"></i><i style="height:80%"></i><i style="height:50%"></i><i style="height:30%"></i><i style="height:45%"></i></div>
+      <div class="bar-lbl"><span>seg</span><span>ter</span><span>qua</span><span>qui</span><span>sex</span><span>sáb</span><span>dom</span></div>
+      <div class="row"><span>Bloqueios: 6</span><button class="btn ghost" type="button">Ver resumo</button></div>`,
+    crianca:`<div class="kid-label">Sem aviso</div><p class="muted" style="color:#dbe6ee;margin:0">O relatório é só para o responsável.</p>` },
+  { id:'offline', fase:'proximos', titulo:'Alerta de aparelho offline', viab:'media', risco:'baixo',
+    desc:'Avisa o responsável quando o aparelho fica sem contato por tempo demais.',
+    painel:`<div class="row"><span>Avisar se ficar offline por</span><select aria-label="Tempo"><option>2 h</option><option>6 h</option><option>12 h</option></select></div>
+      <div class="row"><span>Último contato</span><strong>há 3 h</strong></div>`,
+    crianca:`<div class="kid-label">Sem aviso</div><p class="muted" style="color:#dbe6ee;margin:0">Nada aparece para a criança.</p>` },
+  { id:'tentativa', fase:'proximos', titulo:'Alerta de tentativa de desativar', viab:'media', risco:'baixo',
+    desc:'Registra e avisa quando alguém tenta desinstalar o app ou mexer na proteção.',
+    painel:`<div class="log">17:02 · Tentou desativar o controle <span>bloqueado</span></div>
+      <div class="log">16:40 · Tentou abrir Configurações <span>bloqueado</span></div>`,
+    crianca:`<div class="kid-label">Sem aviso</div><p class="muted" style="color:#dbe6ee;margin:0">O registro fica só com o responsável.</p>` },
+  { id:'escola', fase:'proximos', titulo:'Modo escola', viab:'media', risco:'baixo',
+    desc:'Em dias e horários de aula, só os apps liberados para a escola funcionam.',
+    painel:`<div class="days" aria-label="Dias de aula"><span class="day on">S</span><span class="day on">T</span><span class="day on">Q</span><span class="day on">Q</span><span class="day on">S</span><span class="day">S</span><span class="day">D</span></div>
+      <div class="row"><span>Das</span><input type="time" value="07:30" aria-label="Início"></div>
+      <div class="row"><span>Até</span><input type="time" value="12:00" aria-label="Fim"></div>
+      <p class="muted" style="margin:0">Apps permitidos: Aprender Letras, Matemática Fácil.</p>`,
+    crianca:`<div class="kid-label">Launcher</div><span class="pill">🎒 Modo escola até 12:00</span><p class="muted" style="color:#dbe6ee;margin:6px 0 0">Só os apps da escola aparecem.</p>` },
+  { id:'descanso', fase:'proximos', titulo:'Descanso por dia da semana', viab:'media', risco:'baixo',
+    desc:'Horário diferente em cada dia, por exemplo mais tempo no fim de semana.',
+    painel:`<div class="days" aria-label="Dias"><span class="day on">S</span><span class="day on">T</span><span class="day on">Q</span><span class="day on">Q</span><span class="day on">S</span><span class="day on">S</span><span class="day on">D</span></div>
+      <div class="row"><span>Seg–sex</span><span>08:00 às 20:00</span></div>
+      <div class="row"><span>Sáb–dom</span><span>09:00 às 21:00</span></div>`,
+    crianca:`<div class="kid-label">Launcher</div><span class="pill">Restam 18 min hoje · até 20:00</span>` },
+  { id:'limiteapp', fase:'proximos', titulo:'Limite de tempo por app', viab:'media', risco:'medio',
+    desc:'Ex.: 30 minutos de jogos por dia. Ao acabar, o app fecha.',
+    painel:`<div class="row"><span>Jogo Aventura</span><span>18 de 30 min</span></div>
+      <div class="bat" role="img" aria-label="18 de 30 minutos"><i style="width:60%"></i></div>
+      <div class="row"><span>Vídeos Demo</span><span>sem limite</span></div>`,
+    crianca:`<div class="kid-label">Ao acabar o limite</div><div class="banner">⏱️ O tempo de Jogo Aventura acabou por hoje.</div>` },
+  { id:'geofence', fase:'fora', titulo:'Aviso ao chegar ou sair de um lugar', viab:'media', risco:'alto',
+    desc:'Avisa quando a criança chega à escola ou sai de casa. Dado sensível: depende de decisão sobre retenção.',
+    painel:`<div class="map" role="img" aria-label="Mapa ilustrativo"><i></i><b></b></div>
+      <div class="row"><span>Lugar: Escola</span><span>raio 150 m</span></div>
+      <p class="muted" style="margin:0">Aviso ao entrar e ao sair.</p>`,
+    crianca:`<div class="kid-label">Aviso visível</div><div class="banner">📍 Seu responsável é avisado quando você chega e sai da escola.</div>` },
+  { id:'pausarnet', fase:'fora', titulo:'Pausar a internet do aparelho', viab:'baixa', risco:'alto',
+    desc:'Desliga a rede do celular. Exige VPN ou administração de rede; não há API simples no app.',
+    painel:`<div class="fora-box">Indisponível nesta fase.<br>Exige VPN ou administração de rede.</div>`,
+    crianca:`<div class="kid-label">—</div><p class="muted" style="color:#dbe6ee;margin:0">Não se aplica nesta fase.</p>` },
+  { id:'sites', fase:'fora', titulo:'Bloqueio de sites', viab:'baixa', risco:'alto',
+    desc:'Filtra a navegação. Exige VPN ou DNS, é complexo de manter e fácil de burlar.',
+    painel:`<div class="fora-box">Indisponível nesta fase.<br>Exige filtro de rede próprio.</div>`,
+    crianca:`<div class="kid-label">—</div><p class="muted" style="color:#dbe6ee;margin:0">Não se aplica nesta fase.</p>` },
+  { id:'contatos', fase:'fora', titulo:'Contatos permitidos (ligações e SMS)', viab:'baixa', risco:'alto',
+    desc:'Só falar com contatos aprovados. Exige substituir o discador e o app de mensagens.',
+    painel:`<div class="fora-box">Indisponível nesta fase.<br>Exige substituir discador e mensagens.</div>`,
+    crianca:`<div class="kid-label">—</div><p class="muted" style="color:#dbe6ee;margin:0">Não se aplica nesta fase.</p>` },
+  { id:'hora', fase:'fora', titulo:'Impedir mudar data e hora', viab:'media', risco:'medio',
+    desc:'Evita burlar o horário mudando o relógio do aparelho. Exige Device Owner e teste no aparelho.',
+    painel:`<div class="row"><span>Bloquear mudança de data e hora</span><input type="checkbox" checked aria-label="Bloquear mudança de hora"></div>
+      <p class="muted" style="margin:0">Requer o aparelho como Device Owner.</p>`,
+    crianca:`<div class="kid-label">Ajustes</div><p class="muted" style="color:#dbe6ee;margin:0">A opção de data e hora fica bloqueada.</p>` },
+];
+
+const RISCO = { baixo:'Risco baixo', medio:'Risco médio', alto:'Risco alto' };
+const VIAB = { alta:'Viabilidade alta', media:'Viabilidade média', baixa:'Viabilidade baixa' };
+
+function cartao(c) {
+  const fora = c.fase === 'fora';
+  return `<article class="card ${fora ? 'fora' : ''}" data-fase="${c.fase}" aria-labelledby="t-${c.id}">
+    <div class="card-head"><h2 id="t-${c.id}">${c.titulo}</h2></div>
+    <div class="tags">
+      <span class="tag ${c.viab}">${VIAB[c.viab]}</span>
+      <span class="tag risco-${c.risco}">${RISCO[c.risco]}</span>
+      <span class="tag ${fora ? 'baixa' : 'alta'}">${fora ? 'Fora desta fase' : 'Próximo passo'}</span>
+    </div>
+    <p class="desc">${c.desc}</p>
+    <div class="sub">Tela do responsável</div>
+    <div class="panel-mock">${c.painel}</div>
+    <div class="sub">O que a criança vê</div>
+    <div class="kid-mock">${c.crianca}</div>
+  </article>`;
+}
+
+document.getElementById('grid').innerHTML = CARTOES.map(cartao).join('');
+
+// Filtros da barra superior
+document.querySelectorAll('[data-filtro]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-filtro]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  const f = b.dataset.filtro;
+  document.querySelectorAll('.card').forEach(card => {
+    card.hidden = !(f === 'todos' || card.dataset.fase === f);
+  });
+}));
+
+// Ação de demonstração (sem efeito real)
+document.getElementById('grid').addEventListener('click', e => {
+  const b = e.target.closest('[data-acao="tocar"]');
+  if (b) { b.textContent = 'Tocando… (demonstração)'; setTimeout(() => { b.textContent = '🔔 Tocar aparelho por 10 s'; }, 1500); }
+});
+</script>
+</body>
+</html>
