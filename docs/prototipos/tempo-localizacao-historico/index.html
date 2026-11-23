@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Protótipo — Tempo, localização e histórico (dados fictícios)</title>
+<style>
+  :root {
+    --bg: #eef3f7; --surface: #fff; --surface-soft: #f6f9fb;
+    --ink: #142538; --muted: #5d6e80; --border: #dce5ec;
+    --primary: #0a7c76; --primary-dark: #075a58; --accent: #42c8b5;
+    --success: #13796f; --warning: #8a520a; --warning-bg: #fff6e6; --danger: #b83f50; --focus: #63e0cf;
+    --radius: 16px; --radius-sm: 11px;
+    --shadow: 0 14px 36px rgba(25, 50, 70, .10);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, "Segoe UI", sans-serif; color: var(--ink);
+    background: var(--bg); min-height: 100vh; overflow-x: hidden; }
+  button, input, select { font: inherit; }
+  button:focus-visible, input:focus-visible, select:focus-visible, [role="tab"]:focus-visible, summary:focus-visible, .chip:focus-visible {
+    outline: 3px solid var(--focus); outline-offset: 2px; }
+  h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
+  h2 { font-size: 18px; }
+  h3 { font-size: 15px; }
+  .muted { color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+  /* Controles do protótipo (não fazem parte do painel). */
+  .proto-bar { background: #1f2d3a; color: #dbe6ee; padding: 10px 16px; font-size: 13px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .proto-bar b { margin-right: 6px; }
+  .proto-bar button { background: #34495e; color: #fff; border: 0; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  .proto-bar button[aria-pressed="true"] { background: var(--accent); color: #103b42; font-weight: 700; }
+
+  header.top { background: #122c40; color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 10px; }
+  header.top h1 { font-size: 17px; }
+  nav.tabs { background: #17384d; padding: 8px 12px; display: flex; gap: 6px; overflow-x: auto; }
+  nav.tabs button { flex: none; background: transparent; color: #c1d4de; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 10px 14px; cursor: pointer; font-weight: 700; font-size: 13px; }
+  nav.tabs button[aria-selected="true"] { background: linear-gradient(100deg, var(--accent), #2aa89f); color: #103b42; }
+  .device-pill { margin-left: auto; background: rgba(255,255,255,.12); color: #fff; border-radius: 999px; padding: 6px 12px; font-size: 13px; white-space: nowrap; }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 18px 16px 60px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: clamp(16px, 2.5vw, 24px); margin-bottom: 18px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .btn { border: 0; border-radius: var(--radius-sm); padding: 11px 15px; font-weight: 700; cursor: pointer; background: var(--primary); color: #fff; }
+  .btn:hover:not(:disabled) { background: var(--primary-dark); }
+  .btn.ghost { background: transparent; color: var(--primary); border: 1px solid var(--border); }
+  .btn.danger { background: var(--danger); }
+  .btn.small { padding: 7px 11px; font-size: 13px; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .notice { border-left: 4px solid var(--warning); background: var(--warning-bg); padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.5; margin: 12px 0; }
+  .state { text-align: center; padding: 28px 16px; color: var(--muted); }
+  .state .big { font-size: 28px; display: block; margin-bottom: 6px; }
+  .state strong { color: var(--ink); display: block; margin-bottom: 4px; }
+  .loading { height: 14px; border-radius: 7px; background: linear-gradient(90deg, #edf2f6, #f8fbfd, #edf2f6); background-size: 200% 100%; animation: shimmer 1.2s infinite; margin: 10px 0; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .loading { animation: none; } }
+
+  /* Tempo de uso */
+  .usage-meter { margin: 14px 0 4px; }
+  .usage-meter .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .usage-meter strong { font-size: 26px; }
+  .bar { height: 12px; background: #e3ecf1; border-radius: 12px; overflow: hidden; margin-top: 10px; }
+  .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--primary)); }
+  .bar i.warn { background: linear-gradient(90deg, #f0b35a, var(--warning)); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .field { display: grid; gap: 6px; }
+  .field label { font-size: 13px; color: var(--muted); font-weight: 700; }
+  .field input, .field select { padding: 11px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-soft); color: var(--ink); }
+  .toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #edf2f6; }
+  .switch { flex: none; width: 52px; height: 44px; border: 0; background: transparent; cursor: pointer; padding: 0; position: relative; }
+  .switch::before { content: ''; position: absolute; left: 6px; right: 6px; top: 50%; transform: translateY(-50%); height: 26px; border-radius: 999px; background: #c9d6df; transition: background .15s; }
+  .switch::after { content: ''; position: absolute; left: 9px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .15s; }
+  .switch[aria-checked="true"]::before { background: var(--primary); }
+  .switch[aria-checked="true"]::after { left: 23px; }
+  .switch:disabled { opacity: .45; cursor: default; }
+  .extra { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  .extra .muted { margin-right: 4px; }
+  .savebar { position: fixed; left: 0; right: 0; bottom: 0; background: #122c40; color: #fff; padding: 12px 16px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; box-shadow: 0 -6px 20px rgba(0,0,0,.15); }
+  .savebar[hidden] { display: none; }
+  .savebar .btn { background: var(--accent); color: #103b42; }
+  .savebar .btn.ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.35); }
+
+  /* Localização */
+  .map { position: relative; height: 200px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); background: #e6eef3; margin-top: 12px; }
+  .map svg { width: 100%; height: 100%; display: block; }
+  .pos { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+  .pos dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; }
+  .pos dt { color: var(--muted); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; padding-top: 2px; }
+  .pos dd { margin: 0; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+  /* Histórico */
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .chip { border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 7px 12px; font-size: 13px; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: #e3f6f2; border-color: var(--accent); color: var(--primary-dark); font-weight: 700; }
+  .day { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 800; margin: 16px 0 6px; }
+  .event { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid #edf2f6; }
+  .event time { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .event .what { min-width: 0; }
+  .event .what strong { display: block; overflow-wrap: anywhere; }
+  .event .what span { color: var(--muted); font-size: 12px; }
+  .tag { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+  .tag.blocked { background: #fbe9ec; color: var(--danger); }
+  .tag.ok { background: #e3f6f2; color: var(--success); }
+  .tag.wait { background: #eef2f5; color: var(--muted); }
+  .cmd-status { font-size: 18px; text-align: center; }
+
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (max-width: 560px) {
+    .grid2 { grid-template-columns: 1fr; }
+    .event { grid-template-columns: 46px 1fr; }
+    .event .tag { grid-column: 2; justify-self: start; }
+    .usage-meter strong { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="proto-bar" role="group" aria-label="Controles do protótipo (não fazem parte do painel)">
+  <b>Protótipo · dados fictícios</b>
+  <button type="button" data-state="padrao" aria-pressed="true">Padrão</button>
+  <button type="button" data-state="carregando" aria-pressed="false">Carregando</button>
+  <button type="button" data-state="vazio" aria-pressed="false">Vazio</button>
+  <button type="button" data-state="erro" aria-pressed="false">Erro</button>
+  <button type="button" data-state="sem-permissao" aria-pressed="false">Observador (somente leitura)</button>
+</div>
+
+<header class="top">
+  <span aria-hidden="true">🛡️</span><h1>Controle Infantil</h1>
+  <span class="device-pill">Celular da Ana · guardião</span>
+</header>
+<nav class="tabs" role="tablist" aria-label="Seções do aparelho">
+  <button type="button" role="tab" id="t-tempo" aria-controls="p-tempo" aria-selected="true">⏱️ Tempo de uso</button>
+  <button type="button" role="tab" id="t-local" aria-controls="p-local" aria-selected="false">📍 Localização</button>
+  <button type="button" role="tab" id="t-hist" aria-controls="p-hist" aria-selected="false">🕘 Histórico</button>
+</nav>
+
+<main class="page">
+
+  <!-- Tempo de uso -->
+  <section role="tabpanel" id="p-tempo" aria-labelledby="t-tempo">
+    <div class="card">
+      <div class="head">
+        <div>
+          <h2>Tempo de uso de hoje</h2>
+          <p class="muted" style="margin:4px 0 0">Mostra quanto já foi usado e permite liberar tempo extra.</p>
+        </div>
+      </div>
+      <div id="usoConteudo"></div>
+    </div>
+    <div class="card" id="cardRegras">
+      <h2>Regras do dia</h2>
+      <p class="muted" style="margin:6px 0 0">Os limites valem somente quando o controle estiver ativo.</p>
+      <div class="toggle-row" style="margin-top:12px">
+        <span><strong>Ativar limites de tempo</strong><br><span class="muted">Quando desligado, o celular não bloqueia por horário ou limite.</span></span>
+        <button type="button" role="switch" class="switch" id="swAtivo" aria-checked="true" aria-label="Ativar limites de tempo"></button>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="hIni">Pode usar a partir de</label><input type="time" id="hIni" value="08:00"></div>
+        <div class="field"><label for="hFim">Até</label><input type="time" id="hFim" value="20:00"></div>
+        <div class="field" style="grid-column:1/-1"><label for="limite">Tempo máximo por dia</label>
+          <select id="limite"><option>Sem limite</option><option>30 min</option><option selected>1 h</option><option>1 h 30</option><option>2 h</option><option>3 h</option></select></div>
+      </div>
+      <div class="extra" id="extra">
+        <span class="muted">Tempo extra:</span>
+        <button type="button" class="btn ghost small" data-grant="+15 min">+15 min</button>
+        <button type="button" class="btn ghost small" data-grant="+30 min">+30 min</button>
+        <button type="button" class="btn ghost small" data-grant="+1 h">+1 h</button>
+        <button type="button" class="btn ghost small" data-grant="Encerrar liberação">Encerrar liberação</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Localização -->
+  <section role="tabpanel" id="p-local" aria-labelledby="t-local" hidden>
+    <div class="card">
+      <div class="head">
+        <div>
+          <h2>Última localização</h2>
+          <p class="muted" style="margin:4px 0 0">Posição mais recente enviada pelo celular da criança.</p>
+        </div>
+      </div>
+      <div id="locConteudo"></div>
+    </div>
+  </section>
+
+  <!-- Histórico -->
+  <section role="tabpanel" id="p-hist" aria-labelledby="t-hist" hidden>
+    <div class="card">
+      <div class="head"><div><h2>Apps usados</h2><p class="muted" style="margin:4px 0 0">Registros de abertura e bloqueio dos últimos dias.</p></div></div>
+      <div class="chips" role="group" aria-label="Filtrar histórico de apps">
+        <button type="button" class="chip" aria-pressed="true" data-f="todos">Todos</button>
+        <button type="button" class="chip" aria-pressed="false" data-f="bloqueados">Só bloqueados</button>
+      </div>
+      <div id="histApps"></div>
+    </div>
+    <div class="card">
+      <h2>Comandos recentes</h2>
+      <p class="muted" style="margin:4px 0 8px">Ações enviadas ao celular e o resultado de cada uma.</p>
+      <div id="histCmd"></div>
+    </div>
+  </section>
+
+</main>
+
+<div class="savebar" id="savebar" hidden role="region" aria-label="Alterações de tempo pendentes">
+  <span id="savePend">Alterações não salvas</span>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn ghost" type="button" id="btnDesfazer">Descartar</button>
+    <button class="btn" type="button" id="btnSalvarTempo">Salvar limites</button>
+  </div>
+</div>
+
+<script>
+// Dados fictícios.
+const DADOS = {
+  uso: { usadoMin: 42, limiteMin: 60, extraAte: '18:40', ativo: true },
+  local: { lat: -27.5954, lon: -48.5480, precisao: 12, quando: 'há 5 min', fonte: 'GPS' },
+  apps: [
+    { hora: '19:42', dia: 'Hoje', nome: 'Jogo Aventura', bloqueado: false },
+    { hora: '19:10', dia: 'Hoje', nome: 'Vídeos Demo', bloqueado: true },
+    { hora: '18:55', dia: 'Hoje', nome: 'Aprender Letras', bloqueado: false },
+    { hora: '17:30', dia: 'Ontem', nome: 'Mensagens Demo', bloqueado: true },
+    { hora: '16:05', dia: 'Ontem', nome: 'Jogo Aventura', bloqueado: false },
+  ],
+  cmds: [
+    { hora: '19:40', tipo: 'Bloquear tela', st: 'ok', det: 'Concluído' },
+    { hora: '18:20', tipo: 'Pedir localização', st: 'ok', det: 'Posição recebida' },
+    { hora: '17:02', tipo: 'Reiniciar', st: 'wait', det: 'Aguardando o celular' },
+  ],
+};
+
+let estado = 'padrao';
+let filtro = 'todos';
+let pendente = false;
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const soLeitura = () => estado === 'sem-permissao';
+
+function estadoBloco(icone, titulo, texto, extra = '') {
+  return `<div class="state"><span class="big" aria-hidden="true">${icone}</span><strong>${titulo}</strong>${texto}${extra}</div>`;
+}
+
+function renderUso() {
+  const el = document.getElementById('usoConteudo');
+  if (estado === 'carregando') { el.innerHTML = '<div class="loading"></div><div class="loading" style="width:60%"></div>'; return; }
+  if (estado === 'vazio') { el.innerHTML = estadoBloco('⌛', 'O celular ainda não enviou o status', 'Verifique se o app está instalado e pareado. Em alguns segundos os dados de hoje aparecem aqui.'); return; }
+  if (estado === 'erro') { el.innerHTML = estadoBloco('⚠️', 'Não foi possível carregar o tempo de uso', 'Verifique sua conexão e tente novamente.', '<br><button class="btn" type="button" data-retry="uso">Tentar novamente</button>'); return; }
+  const d = DADOS.uso;
+  const pct = Math.min(100, Math.round((d.usadoMin / d.limiteMin) * 100));
+  const aviso = pct >= 80;
+  el.innerHTML = `
+    <div class="usage-meter">
+      <div class="row"><strong>${d.usadoMin} min</strong><span class="muted">de ${d.limiteMin} min liberados hoje · restam ${d.limiteMin - d.usadoMin} min</span></div>
+      <div class="bar" role="img" aria-label="${pct}% do tempo de hoje usado"><i class="${aviso ? 'warn' : ''}" style="width:${pct}%"></i></div>
+      <p class="muted" style="margin:8px 0 0">Tempo extra liberado até ${d.extraAte}</p>
+    </div>`;
+  document.querySelectorAll('#extra button').forEach(b => b.disabled = soLeitura());
+  const sw = document.getElementById('swAtivo');
+  sw.disabled = soLeitura();
+  sw.setAttribute('aria-checked', String(DADOS.uso.ativo));
+  document.querySelectorAll('#cardRegras input, #cardRegras select').forEach(c => c.disabled = soLeitura());
+  if (soLeitura()) {
+    el.insertAdjacentHTML('beforeend', '<p class="notice" style="margin-top:12px"><strong>Somente leitura.</strong> Os limites são definidos pelo responsável deste aparelho.</p>');
+  }
+}
+
+function renderLocal() {
+  const el = document.getElementById('locConteudo');
+  if (estado === 'carregando') { el.innerHTML = '<div class="loading"></div><div class="loading" style="width:50%"></div>'; return; }
+  if (estado === 'vazio') { el.innerHTML = estadoBloco('📍', 'Sem localização registrada ainda', 'Peça a localização pelo comando "Pedir localização" ou ligue o GPS no celular.'); return; }
+  if (estado === 'erro') { el.innerHTML = estadoBloco('⚠️', 'Não foi possível buscar a localização', 'Tente novamente em instantes.', '<br><button class="btn" type="button" data-retry="local">Tentar novamente</button>'); return; }
+  const l = DADOS.local;
+  el.innerHTML = `
+    <div class="map" role="img" aria-label="Mapa ilustrativo, sem tiles externos">
+      <svg viewBox="0 0 600 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <rect width="600" height="200" fill="#e6eef3"/>
+        <path d="M0 150 Q150 110 300 140 T600 120" stroke="#c9dbe5" stroke-width="18" fill="none"/>
+        <path d="M120 0 L160 200 M380 0 L340 200" stroke="#d6e4ec" stroke-width="10"/>
+        <rect x="200" y="40" width="120" height="50" rx="8" fill="#d9f0eb"/>
+        <circle cx="300" cy="100" r="34" fill="rgba(10,124,118,.15)"/>
+        <circle cx="300" cy="100" r="9" fill="#0a7c76"/>
+      </svg>
+    </div>
+    <div class="pos">
+      <dl>
+        <dt>Coordenadas</dt><dd>${l.lat.toFixed(5)}, ${l.lon.toFixed(5)}</dd>
+        <dt>Precisão</dt><dd>±${l.precisao} m</dd>
+        <dt>Atualizada</dt><dd>${esc(l.quando)}</dd>
+        <dt>Fonte</dt><dd>${esc(l.fonte)}</dd>
+      </dl>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" type="button" id="btnBuscarPos" ${soLeitura() ? 'disabled' : ''}>Pedir nova posição</button>
+      <button class="btn" type="button" id="btnMapa">Abrir no mapa</button>
+    </div>
+    ${soLeitura() ? '<p class="notice" style="margin-top:12px"><strong>Somente leitura.</strong> Você pode ver a última posição; só o responsável pode pedir uma nova.</p>' : ''}`;
+}
+
+function renderHist() {
+  const apps = document.getElementById('histApps');
+  const cmd = document.getElementById('histCmd');
+  if (estado === 'carregando') {
+    apps.innerHTML = '<div class="loading"></div><div class="loading" style="width:70%"></div>';
+    cmd.innerHTML = '<div class="loading" style="width:50%"></div>';
+    return;
+  }
+  if (estado === 'vazio') {
+    apps.innerHTML = estadoBloco('🕘', 'Sem registros ainda', 'O histórico aparece quando o bloqueio de apps (Acessibilidade) estiver ligado no celular.');
+    cmd.innerHTML = estadoBloco('📨', 'Nenhum comando ainda', 'Os comandos enviados aparecem aqui com o resultado.');
+    return;
+  }
+  if (estado === 'erro') {
+    apps.innerHTML = estadoBloco('⚠️', 'Erro ao carregar o histórico', 'Tente novamente.', '<br><button class="btn" type="button" data-retry="hist">Tentar novamente</button>');
+    cmd.innerHTML = '';
+    return;
+  }
+  const lista = DADOS.apps.filter(a => filtro === 'todos' || a.bloqueado);
+  let ultimo = '';
+  apps.innerHTML = lista.length ? lista.map(a => {
+    const cab = a.dia !== ultimo ? `<div class="day">${a.dia}</div>` : '';
+    ultimo = a.dia;
+    return `${cab}<div class="event"><time>${a.hora}</time>
+      <div class="what"><strong>${esc(a.nome)}</strong><span>${a.bloqueado ? 'Abrir foi bloqueado' : 'Aberto normalmente'}</span></div>
+      <span class="tag ${a.bloqueado ? 'blocked' : 'ok'}">${a.bloqueado ? 'Bloqueado' : 'Liberado'}</span></div>`;
+  }).join('') : '<p class="muted">Nenhum bloqueio registrado.</p>';
+  cmd.innerHTML = DADOS.cmds.map(c => `
+    <div class="event"><time>${c.hora}</time>
+      <div class="what"><strong>${esc(c.tipo)}</strong><span>${esc(c.det)}</span></div>
+      <span class="tag ${c.st === 'ok' ? 'ok' : 'wait'}">${c.st === 'ok' ? 'Concluído' : 'Pendente'}</span></div>`).join('');
+}
+
+function atualizarBarra() {
+  document.getElementById('savebar').hidden = !pendente || soLeitura();
+}
+
+function renderTudo() {
+  renderUso(); renderLocal(); renderHist(); atualizarBarra();
+}
+
+function setEstado(novo) {
+  estado = novo;
+  document.querySelectorAll('.proto-bar button[data-state]').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.state === novo)));
+  renderTudo();
+}
+
+// Abas (padrão do painel: uma seção por vez)
+document.querySelectorAll('[role="tab"]').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('[role="tab"]').forEach(x => x.setAttribute('aria-selected', String(x === t)));
+  document.querySelectorAll('[role="tabpanel"]').forEach(p => p.hidden = p.id !== t.getAttribute('aria-controls'));
+}));
+
+document.querySelectorAll('.proto-bar button[data-state]').forEach(b => b.onclick = () => setEstado(b.dataset.state));
+
+// Tempo extra é enviado na hora (não passa pela barra de salvar), como no painel.
+document.getElementById('extra').addEventListener('click', e => {
+  const b = e.target.closest('[data-grant]'); if (!b || soLeitura()) return;
+  b.textContent = 'Enviado ✓';
+  setTimeout(() => { b.textContent = b.dataset.grant; }, 1200);
+});
+
+['hIni','hFim','limite','swAtivo'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => { pendente = true; atualizarBarra(); });
+  el.addEventListener('change', () => { pendente = true; atualizarBarra(); });
+});
+document.getElementById('swAtivo').addEventListener('click', () => {
+  if (soLeitura()) return;
+  const sw = document.getElementById('swAtivo');
+  sw.setAttribute('aria-checked', String(sw.getAttribute('aria-checked') !== 'true'));
+  pendente = true; atualizarBarra();
+});
+document.getElementById('btnSalvarTempo').onclick = () => { pendente = false; atualizarBarra(); };
+document.getElementById('btnDesfazer').onclick = () => {
+  pendente = false;
+  document.getElementById('hIni').value = '08:00';
+  document.getElementById('hFim').value = '20:00';
+  document.getElementById('limite').selectedIndex = 2;
+  document.getElementById('swAtivo').setAttribute('aria-checked', 'true');
+  atualizarBarra();
+};
+
+document.addEventListener('click', e => {
+  if (e.target.closest('#btnBuscarPos')) { setEstado('carregando'); setTimeout(() => setEstado('padrao'), 1000); }
+  if (e.target.closest('[data-retry]')) {
+    setEstado('carregando');
+    setTimeout(() => { if (estado === 'carregando') setEstado('padrao'); }, 800);
+  }
+});
+
+document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+  filtro = c.dataset.f;
+  document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === c)));
+  renderHist();
+}));
+
+setEstado('padrao');
+</script>
+</body>
+</html>

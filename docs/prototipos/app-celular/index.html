@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Protótipo — App do celular (launcher e área do responsável)</title>
+<style>
+  :root {
+    --ink: #142538; --muted: #5d6e80; --border: #dce5ec; --surface: #fff; --soft: #f6f9fb;
+    --primary: #0a7c76; --primary-dark: #075a58; --accent: #42c8b5;
+    --warning: #8a520a; --warning-bg: #fff6e6; --danger: #b83f50; --focus: #63e0cf;
+    --radius: 16px; --radius-sm: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, "Segoe UI", sans-serif; color: var(--ink);
+    background: #dfe8ee; min-height: 100vh; overflow-x: hidden; }
+  button { font: inherit; }
+  button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .proto-bar { background: #1f2d3a; color: #dbe6ee; padding: 10px 16px; font-size: 13px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .proto-bar b { margin-right: 6px; }
+  .proto-bar button { background: #34495e; color: #fff; border: 0; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  .proto-bar button[aria-pressed="true"] { background: var(--accent); color: #103b42; font-weight: 700; }
+
+  .stage { display: flex; gap: 24px; justify-content: center; align-items: flex-start; flex-wrap: wrap; padding: 24px 12px 48px; }
+  .notes { max-width: 340px; font-size: 13px; line-height: 1.55; color: #33465a; }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; color: var(--ink); }
+  .notes li { margin-bottom: 6px; }
+
+  /* Moldura do celular (360 × 720). */
+  .phone { width: 360px; height: 720px; border-radius: 34px; background: #0f1a24; padding: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.25); flex: none; }
+  .screen { width: 100%; height: 100%; border-radius: 24px; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .status-bar { height: 26px; font-size: 11px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; color: inherit; opacity: .8; flex: none; }
+
+  /* Launcher da criança: fundo neutro (o papel de parede do sistema aparece atrás). */
+  .launcher { background: linear-gradient(160deg, #2d6f8f, #17384d); color: #fff; }
+  .clock { text-align: center; padding: 18px 16px 6px; }
+  .clock .time { font-size: 60px; font-weight: 300; letter-spacing: -.02em; line-height: 1; text-shadow: 0 2px 10px rgba(0,0,0,.25); }
+  .clock .date { font-size: 15px; opacity: .92; margin-top: 6px; text-transform: capitalize; }
+  .chip-time { display: block; margin: 12px auto 0; width: fit-content; background: rgba(255,255,255,.18); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 700; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 8px; padding: 22px 14px; }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: 0; color: #fff; cursor: pointer; padding: 4px 0; }
+  .app .ic { width: 58px; height: 58px; border-radius: 16px; display: grid; place-items: center; font-size: 26px; background: rgba(255,255,255,.18); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+  .app span { font-size: 12px; max-width: 76px; text-align: center; line-height: 1.2; overflow-wrap: anywhere; }
+  .hint-off { margin: 0 14px 10px; background: rgba(255,255,255,.16); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; text-align: center; }
+
+  /* Tela de bloqueio (fora do horário ou tempo esgotado). */
+  .blocked { background: #1f3f57; color: #fff; align-items: center; justify-content: center; text-align: center; padding: 28px; }
+  .blocked .big { font-size: 56px; margin-bottom: 12px; }
+  .blocked h3 { font-size: 22px; margin: 0 0 10px; }
+  .blocked p { margin: 0 0 18px; font-size: 15px; line-height: 1.5; opacity: .95; }
+  .tonal { background: rgba(255,255,255,.18); color: #fff; border: 0; border-radius: 999px; padding: 11px 18px; font-weight: 700; cursor: pointer; }
+
+  /* Área do responsável (depois do PIN). */
+  .guardian { background: #f2f6f9; color: var(--ink); }
+  .g-head { background: #122c40; color: #fff; padding: 14px 16px 16px; }
+  .g-head h3 { margin: 0; font-size: 17px; }
+  .g-head p { margin: 4px 0 0; font-size: 12px; opacity: .85; }
+  .g-body { overflow-y: auto; flex: 1; padding: 12px 12px 22px; }
+  .summary { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .summary div span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 800; }
+  .summary div strong { font-size: 13px; }
+  .sec-title { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 800; margin: 16px 4px 6px; }
+  .group { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-top: 1px solid #edf2f6; background: none; border-left: 0; border-right: 0; border-bottom: 0; width: 100%; text-align: left; cursor: pointer; color: var(--ink); }
+  .row:first-child { border-top: 0; }
+  .row .ri { width: 34px; height: 34px; border-radius: 10px; background: #e3f6f2; display: grid; place-items: center; font-size: 16px; flex: none; }
+  .row .rt { flex: 1; min-width: 0; }
+  .row .rt strong { display: block; font-size: 14px; }
+  .row .rt small { color: var(--muted); font-size: 12px; line-height: 1.35; display: block; margin-top: 2px; }
+  .row .chev { color: var(--muted); font-size: 16px; }
+  .row.attn .ri { background: var(--warning-bg); }
+  .row.danger .ri { background: #fbe9ec; }
+  .row.danger strong { color: var(--danger); }
+  .pill { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+  .pill.ok { background: #e3f6f2; color: var(--primary-dark); }
+  .pill.warn { background: var(--warning-bg); color: var(--warning); }
+  .pill.off { background: #fbe9ec; color: var(--danger); }
+  .zone { margin-top: 14px; border: 1px dashed #e8b6bf; border-radius: var(--radius); padding: 4px 0; background: #fff; }
+  .pin-tip { font-size: 12px; color: var(--muted); padding: 10px 4px 0; line-height: 1.45; }
+  .pair-box { font-size: 26px; letter-spacing: .18em; text-align: center; padding: 14px; background: var(--soft); border-radius: var(--radius-sm); margin: 10px 14px 14px; font-weight: 700; }
+
+  /* Estados da área: desativado ou sem permissão. */
+  .notice { border-left: 4px solid var(--warning); background: var(--warning-bg); padding: 10px 12px; border-radius: var(--radius-sm); font-size: 12px; line-height: 1.45; margin-bottom: 12px; }
+
+  @media (max-width: 420px) {
+    .phone { width: 100%; height: 720px; border-radius: 0; padding: 0; }
+    .screen { border-radius: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="proto-bar" role="group" aria-label="Controles do protótipo (não fazem parte do app)">
+  <b>Protótipo · dados fictícios</b>
+  <button type="button" data-view="launcher" aria-pressed="true">Launcher da criança</button>
+  <button type="button" data-view="bloqueado" aria-pressed="false">Tempo esgotado</button>
+  <button type="button" data-view="responsavel" aria-pressed="false">Área do responsável</button>
+  <button type="button" data-view="responsavel-desativado" aria-pressed="false">Responsável · controle desativado</button>
+</div>
+
+<div class="stage">
+  <div class="phone" aria-label="Simulação do celular">
+    <div class="screen" id="tela"></div>
+  </div>
+  <aside class="notes">
+    <h2>O que muda e por quê</h2>
+    <ul>
+      <li><strong>Launcher:</strong> mostra quanto tempo ainda falta hoje e até que horas pode usar. A criança passa a entender a regra antes de ser bloqueada.</li>
+      <li><strong>Tela de bloqueio:</strong> explica o motivo em linguagem simples e quando volta. O botão de responsável continua, mas discreto.</li>
+      <li><strong>Área do responsável:</strong> agrupa em Uso, Aparelho, Manutenção, Pareamento e Zona de risco. Hoje é uma lista única com ~15 botões de peso igual.</li>
+      <li><strong>Status das permissões:</strong> Acessibilidade, sobreposição e administrador aparecem com estado e ação direta, não só como botão.</li>
+      <li><strong>Liberar o aparelho</strong> fica isolado na Zona de risco, com cor e confirmação.</li>
+      <li><strong>Sem entrada visível para a criança:</strong> o acesso continua pelo toque longo no relógio e pelo PIN. Não se tornou um botão no launcher.</li>
+    </ul>
+    <p class="muted" style="font-size:12px">Os textos, PIN, horários e comandos são os mesmos. Nenhuma regra de bloqueio muda.</p>
+  </aside>
+</div>
+
+<script>
+// Dados fictícios.
+const DADOS = { restam: 18, limite: 60, ateHora: '20:00', usado: 42, conexao: 'Online', ultimo: 'há 2 min',
+  controle: true, permissoes: { acess: true, overlay: false, admin: true } };
+
+const APPS = [
+  ['🧩','Quebra-cabeça'], ['🎨','Desenhos'], ['📚','Aprender'], ['🎵','Músicas'],
+  ['🎬','Vídeos'], ['🚗','Corrida'], ['🧮','Matemática'], ['🌍','Mapas'],
+];
+
+const tela = document.getElementById('tela');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+function statusBar(cor) {
+  return `<div class="status-bar" style="color:${cor}"><span>${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span><span>▮▮▮ 86%</span></div>`;
+}
+
+function launcher() {
+  return `<div class="launcher" style="height:100%;display:flex;flex-direction:column">
+    ${statusBar('#fff')}
+    <div class="clock">
+      <div class="time">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="date">${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</div>
+      <span class="chip-time" aria-label="Tempo restante hoje">⏱ Restam ${DADOS.restam} min · até ${DADOS.ateHora}</span>
+    </div>
+    <div class="grid" style="flex:1;align-content:start">
+      ${APPS.map(([ic, nome]) => `<button type="button" class="app"><span class="ic" aria-hidden="true">${ic}</span><span>${esc(nome)}</span></button>`).join('')}
+    </div>
+    <p class="hint-off" style="margin-bottom:14px">Use os apps liberados pelo seu responsável.</p>
+  </div>`;
+}
+
+function bloqueado() {
+  return `<div class="blocked" style="height:100%">
+    ${statusBar('#fff')}
+    <div class="big" aria-hidden="true">🌙</div>
+    <h3>Hora de descansar</h3>
+    <p>Este aparelho fica disponível das 08:00 às ${DADOS.ateHora}.<br>Você usou o tempo de hoje (${DADOS.limite} min). Amanhã ele libera de novo.</p>
+    <button type="button" class="tonal" data-go="responsavel">Área do responsável</button>
+  </div>`;
+}
+
+function linha(icone, titulo, detalhe, extra = '', classe = '') {
+  return `<button type="button" class="row ${classe}">
+    <span class="ri" aria-hidden="true">${icone}</span>
+    <span class="rt"><strong>${titulo}</strong><small>${detalhe}</small></span>
+    ${extra}<span class="chev" aria-hidden="true">›</span></button>`;
+}
+
+function responsavel(desativado = false) {
+  const p = DADOS.permissoes;
+  const aviso = desativado ? `<p class="notice"><strong>Controle desativado.</strong> O aparelho está liberado. Reative quando quiser voltar às regras.</p>` : '';
+  return `<div class="guardian" style="height:100%;display:flex;flex-direction:column">
+    ${statusBar('#fff')}
+    <div class="g-head"><h3>Área do responsável</h3><p>Celular da Ana · você está autenticado</p></div>
+    <div class="g-body">
+      ${aviso}
+      <div class="summary" role="group" aria-label="Resumo do aparelho">
+        <div><span>Conexão</span><strong>${DADOS.conexao} · ${DADOS.ultimo}</strong></div>
+        <div><span>Controle</span><strong>${desativado ? 'Desativado' : 'Ativo'}</strong></div>
+        <div><span>Uso de hoje</span><strong>${DADOS.usado} de ${DADOS.limite} min</strong></div>
+        <div><span>Horário</span><strong>08:00 às ${DADOS.ateHora}</strong></div>
+      </div>
+
+      <div class="sec-title">Uso</div>
+      <div class="group">
+        ${linha('📱','Apps liberados','8 de 24 apps')}
+        ${linha('⏱️','Horário e limite','08:00 às 20:00 · 1 h por dia')}
+      </div>
+
+      <div class="sec-title">Aparelho</div>
+      <div class="group">
+        ${linha('♿','Acessibilidade (bloqueio de apps)', p.acess ? 'Ativa' : 'Precisa ativar', `<span class="pill ${p.acess ? 'ok' : 'warn'}">${p.acess ? 'OK' : 'Ativar'}</span>`, p.acess ? '' : 'attn')}
+        ${linha('🪟','Exibir sobre outros apps', p.overlay ? 'Ativa' : 'Precisa ativar para o aviso de descanso', `<span class="pill ${p.overlay ? 'ok' : 'warn'}">${p.overlay ? 'OK' : 'Ativar'}</span>`, p.overlay ? '' : 'attn')}
+        ${linha('🛡️','Administrador do aparelho', p.admin ? 'Ativo: impede desinstalar o app' : 'Não ativo', `<span class="pill ${p.admin ? 'ok' : 'off'}">${p.admin ? 'OK' : 'Falta'}</span>`)}
+      </div>
+
+      <div class="sec-title">Manutenção</div>
+      <div class="group">
+        ${linha('🔓','Liberar por 15 min','Aparelho sem bloqueio para manutenção')}
+        ${desativado
+          ? linha('🔒','Reativar o controle','Volta a valer horário e limite')
+          : linha('⏸️','Desativar controle','Tudo liberado até você reativar')}
+      </div>
+
+      <div class="sec-title">Pareamento</div>
+      <div class="group">
+        ${linha('🔑','Gerar código para outro responsável','Vale por tempo limitado e serve uma vez')}
+      </div>
+      <div class="pair-box" aria-label="Exemplo de código">ABCD 1234</div>
+
+      <div class="sec-title">Zona de risco</div>
+      <div class="zone">
+        ${linha('⛔','Liberar este aparelho','Remove o controle. Exige confirmação.', '', 'danger')}
+      </div>
+      <p class="pin-tip">Ações de risco pedem confirmação. Liberar o aparelho não pode ser desfeito pelo app.</p>
+    </div>
+  </div>`;
+}
+
+const VIEWS = {
+  'launcher': launcher,
+  'bloqueado': bloqueado,
+  'responsavel': () => responsavel(false),
+  'responsavel-desativado': () => responsavel(true),
+};
+
+function setView(v) {
+  tela.innerHTML = VIEWS[v]();
+  document.querySelectorAll('.proto-bar button[data-view]').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+}
+
+document.querySelectorAll('.proto-bar button[data-view]').forEach(b =>
+  b.addEventListener('click', () => setView(b.dataset.view)));
+tela.addEventListener('click', e => {
+  const go = e.target.closest('[data-go]');
+  if (go) setView(go.dataset.go);
+});
+
+setView('launcher');
+</script>
+</body>
+</html>
