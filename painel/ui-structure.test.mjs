@@ -81,7 +81,10 @@ function bootPanel() {
     },
   };
   const source = inlineClassicScript() +
-    '\n;globalThis.__panelTest = { state, renderDevices, selectDevice };';
+    '\n;globalThis.__panelTest = { state, renderDevices, selectDevice, renderApps,' +
+    ' setDeviceApps: list => {' +
+    ' deviceApps = list; allowedSet = new Set(list.filter(a => a.allowed).map(a => a.package));' +
+    ' savedSet = new Set(allowedSet); } };';
   new vm.Script(source, { filename: 'painel/index.html:inline' }).runInNewContext(context);
   return { buttons, elements, fetchCalls, panel: context.__panelTest };
 }
@@ -199,6 +202,89 @@ test('marks the apps list as loading before the device replies', () => {
   harness.panel.state.roles = { 'device-1': 'guardian' };
   harness.panel.selectDevice({ id: 'device-1', label: 'Celular', last_seen: null });
   assert.equal(harness.elements.get('appsList').getAttribute('data-state'), 'loading');
+});
+
+test('lets the device list and the overview be collapsed and reopened', () => {
+  for (const id of ['devicesCard', 'overviewCard']) {
+    assert.match(html, new RegExp(`<details[^>]*id="${id}"[^>]*open`));
+    assert.match(html, new RegExp(`id="${id}"[\\s\\S]*?<summary`));
+  }
+  assert.match(html, /id="devicesSummary"/);
+
+  const harness = bootPanel();
+  harness.panel.state.userId = 'guardian-1';
+  harness.panel.state.roles = { 'device-1': 'guardian' };
+  harness.panel.selectDevice({ id: 'device-1', label: 'Celular', last_seen: null });
+  assert.equal(harness.elements.get('devicesCard').open, false);
+  assert.match(harness.elements.get('devicesSummary').textContent, /Celular/);
+});
+
+test('gives each navigation tab an icon and keeps its label for assistive technology', () => {
+  const tabsBar = html.match(/<div id="tabsBar"[\s\S]*?<\/div>/)[0];
+  const buttons = tabsBar.match(/<button [^>]*data-tab=[\s\S]*?<\/button>/g);
+  assert.equal(buttons.length, 6);
+  for (const button of buttons) {
+    assert.match(button, /class="tab-icon"[^>]*aria-hidden="true"/);
+    assert.match(button, /class="tab-label"/);
+    assert.match(button, /title="[^"]+"/);
+  }
+  const tablet = html.slice(
+    html.indexOf('@media (max-width: 860px)'),
+    html.indexOf('@media (max-width: 560px)'));
+  assert.match(tablet, /\.tab-label\s*\{/);
+  assert.match(tablet, /\.tab-icon\s*\{/);
+});
+
+test('organizes the apps section as the approved prototype', () => {
+  for (const id of ['appsSavebar', 'appsPending', 'btnDiscardApps', 'btnSaveApps', 'appsInstall']) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  assert.match(html, /<details[^>]*id="appsInstall"/);
+  assert.match(html, /role="switch"/);
+  assert.match(html, /class="cat-node"/);
+});
+
+test('renders app switches read-only for viewers and editable for guardians', () => {
+  const apps = [{ package: 'com.a', label: 'App A', category: 'game', allowed: true }];
+
+  const viewer = bootPanel();
+  viewer.panel.state.selected = 'device-1';
+  viewer.panel.state.roles = { 'device-1': 'viewer' };
+  viewer.panel.setDeviceApps(apps);
+  viewer.panel.renderApps();
+  assert.match(viewer.elements.get('appsList').innerHTML, /role="switch"[\s\S]*?aria-checked="true"[\s\S]*?disabled/);
+
+  const guardian = bootPanel();
+  guardian.panel.state.selected = 'device-1';
+  guardian.panel.state.roles = { 'device-1': 'guardian' };
+  guardian.panel.setDeviceApps(apps);
+  guardian.panel.renderApps();
+  const guardianHtml = guardian.elements.get('appsList').innerHTML;
+  assert.match(guardianHtml, /role="switch"[\s\S]*?aria-checked="true"/);
+  assert.doesNotMatch(guardianHtml, /disabled/);
+});
+
+test('offers uninstall to guardians only, and never for the panel app itself', () => {
+  const apps = [
+    { package: 'com.a', label: 'App A', category: 'game', allowed: true },
+    { package: 'com.controleinfantil.kids', label: 'Controle Infantil', category: 'productivity', allowed: true },
+  ];
+
+  const viewer = bootPanel();
+  viewer.panel.state.selected = 'device-1';
+  viewer.panel.state.roles = { 'device-1': 'viewer' };
+  viewer.panel.setDeviceApps(apps);
+  viewer.panel.renderApps();
+  assert.doesNotMatch(viewer.elements.get('appsList').innerHTML, /data-uninstall/);
+
+  const guardian = bootPanel();
+  guardian.panel.state.selected = 'device-1';
+  guardian.panel.state.roles = { 'device-1': 'guardian' };
+  guardian.panel.setDeviceApps(apps);
+  guardian.panel.renderApps();
+  const html2 = guardian.elements.get('appsList').innerHTML;
+  assert.match(html2, /data-uninstall="com\.a"/);
+  assert.doesNotMatch(html2, /data-uninstall="com\.controleinfantil\.kids"/);
 });
 
 test('renders viewer device cards without an unlink control', () => {

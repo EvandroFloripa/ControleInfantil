@@ -52,6 +52,8 @@
   .tabs button { background:transparent; border:1px solid transparent; border-radius:var(--radius-sm);
     padding:12px 14px; cursor:pointer; font-size:13px; color:#c1d4de; text-align:left; transition: .2s ease; }
   .tabs button:hover { background: rgba(255,255,255,.08); color:#fff; }
+  .tabs button { display: flex; align-items: center; gap: 10px; }
+  .tab-icon { font-size: 16px; line-height: 1; width: 22px; text-align: center; flex: none; }
   .tabs button.active { background: linear-gradient(100deg, var(--accent), #2aa89f); color:#103b42; border-color:transparent; box-shadow: 0 7px 18px rgba(66,200,181,.18); }
   .card h2 {
     font-size: 11px; margin: 0 0 16px; color: var(--muted);
@@ -157,6 +159,46 @@
   .apps-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .apps-toolbar input[type=search] { flex:1; min-width:160px; padding:9px 12px;
              border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-soft); }
+  /* Aplicativos: categorias recolhíveis, interruptores e barra de alterações pendentes. */
+  .cat-node { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; overflow: hidden; }
+  .cat-node > .cat-head { list-style: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 12px 44px 12px 14px; background: var(--surface-soft); cursor: pointer; position: relative; color: var(--ink); font-size: 14px; }
+  .cat-node > .cat-head::-webkit-details-marker { display: none; }
+  /* A seta fica no canto superior direito, mesmo quando o cabeçalho quebra linha no celular. */
+  .cat-node > .cat-head::after { content: '▾'; position: absolute; right: 16px; top: 14px; color: var(--muted); line-height: 1; transition: transform .15s; }
+  .cat-node:not([open]) > .cat-head::after { transform: rotate(-90deg); }
+  .cat-head .ico { font-size: 18px; }
+  .cat-head .name { font-weight: 750; }
+  .cat-head .cat-count { color: var(--muted); font-size: 12px; margin-left: auto; }
+  .cat-head .cat-all { background: var(--surface); color: var(--primary); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+  .cat-head .cat-all:hover:not(:disabled) { transform: none; box-shadow: none; background: #e3f6f2; }
+  .cat-head .cat-all:disabled { opacity: .45; cursor: default; }
+  .app-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid #edf2f6; min-height: 56px; cursor: default; }
+  .app-row .app-name { flex: 1; min-width: 0; display: flex; flex-direction: column; margin: 0; }
+  .app-row .app-name strong { font-size: 14px; overflow-wrap: anywhere; }
+  .app-row .app-name small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  .app-uninstall { flex: none; background: transparent; color: var(--danger); border: 1px solid #efc5cc; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 700; }
+  .app-uninstall:hover { transform: none; box-shadow: none; background: #fdf0f2; }
+  .switch { flex: none; width: 52px; height: 44px; border: 0; background: transparent; cursor: pointer; padding: 0; position: relative; }
+  .switch:hover:not(:disabled) { transform: none; box-shadow: none; }
+  .switch::before { content: ''; position: absolute; left: 6px; right: 6px; top: 50%; transform: translateY(-50%); height: 26px; border-radius: 999px; background: #c9d6df; transition: background .15s; }
+  .switch::after { content: ''; position: absolute; left: 9px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .15s; }
+  .switch[aria-checked="true"]::before { background: var(--primary); }
+  .switch[aria-checked="true"]::after { left: 23px; }
+  .switch:disabled { opacity: .45; cursor: default; }
+  .apps-savebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: #122c40; color: #fff;
+    padding: 12px 16px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; box-shadow: 0 -6px 20px rgba(0,0,0,.15); }
+  .apps-savebar.hidden { display: none; }
+  .apps-savebar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .apps-savebar #btnSaveApps { background: var(--accent); color: #103b42; }
+  .apps-savebar #btnDiscardApps { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.35); }
+  .apps-install { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .apps-install > summary { list-style: none; cursor: pointer; position: relative; padding-right: 28px; }
+  .apps-install > summary::-webkit-details-marker { display: none; }
+  .apps-install > summary::after { content: '▾'; position: absolute; right: 4px; top: 2px; color: var(--muted); transition: transform .15s; }
+  .apps-install:not([open]) > summary::after { transform: rotate(-90deg); }
+  .apps-install-body { margin-top: 12px; }
+
   /* Estados das abas: o texto e o ícone dizem o que aconteceu, não só a cor. */
   [data-state="loading"] { color: var(--muted); font-size: 13px; }
   [data-state="empty"], [data-state="error"], [data-state="denied"] { font-size: 13px; line-height: 1.5; }
@@ -165,6 +207,13 @@
   [data-state="error"]::before { content: '⚠ '; font-weight: 750; }
   [data-state="denied"] { color: var(--warning); }
   [data-state="denied"]::before { content: '🔒 '; }
+  .fold-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; cursor: pointer; list-style: none; }
+  .fold-head::-webkit-details-marker { display: none; }
+  .fold-head h2 { margin: 0; }
+  .fold-title { font-size: 22px; text-transform: none; letter-spacing: -.02em; color: var(--ink); }
+  .fold-head::after { content: '▾'; margin-left: auto; color: var(--muted); transition: transform .15s; }
+  details:not([open]) > .fold-head::after { transform: rotate(-90deg); }
+  .fold-body { margin-top: 16px; }
   .permission-note { margin: 0 0 14px; padding: 10px 12px; border-left: 4px solid var(--warning);
     background: #fff8ec; color: var(--ink); border-radius: var(--radius-sm); font-size: 13px; line-height: 1.5; }
   @media (prefers-reduced-motion: reduce) {
@@ -177,7 +226,10 @@
     .sidebar { padding: 10px 14px; position: sticky; top: 68px; z-index: 10; overflow-x: auto; }
     .sidebar::before { display: none; }
     .tabs { flex-direction: row; min-width: max-content; }
-    .tabs button { text-align: center; padding: 10px 13px; }
+    .tabs button { position: relative; justify-content: center; padding: 10px 13px; gap: 0; }
+    .tab-icon { font-size: 22px; width: auto; }
+    /* Em tela estreita, só o ícone aparece; o nome continua para leitores de tela. */
+    .tab-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
     .dashboard-content { padding: 22px 16px 40px; }
     .overview-grid, .command-groups { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   }
@@ -204,12 +256,12 @@
   <aside class="sidebar" aria-label="Navegação do painel">
     <nav aria-label="Navegação principal">
       <div id="tabsBar" class="tabs hidden">
-        <button data-tab="commands" class="active">Comandos</button>
-        <button data-tab="apps">Aplicativos</button>
-        <button data-tab="time">Tempo de uso</button>
-        <button data-tab="location">Localização</button>
-        <button data-tab="history">Histórico</button>
-        <button data-tab="people">Pessoas</button>
+        <button data-tab="commands" title="Comandos" class="active"><span class="tab-icon" aria-hidden="true">🎛️</span><span class="tab-label">Comandos</span></button>
+        <button data-tab="apps" title="Aplicativos"><span class="tab-icon" aria-hidden="true">📱</span><span class="tab-label">Aplicativos</span></button>
+        <button data-tab="time" title="Tempo de uso"><span class="tab-icon" aria-hidden="true">⏱️</span><span class="tab-label">Tempo de uso</span></button>
+        <button data-tab="location" title="Localização"><span class="tab-icon" aria-hidden="true">📍</span><span class="tab-label">Localização</span></button>
+        <button data-tab="history" title="Histórico"><span class="tab-icon" aria-hidden="true">🕘</span><span class="tab-label">Histórico</span></button>
+        <button data-tab="people" title="Pessoas"><span class="tab-icon" aria-hidden="true">👥</span><span class="tab-label">Pessoas</span></button>
       </div>
     </nav>
   </aside>
@@ -231,8 +283,9 @@
   </div>
 
   <!-- 3. Aparelhos -->
-  <div class="card hidden" id="devicesCard">
-    <h2>Aparelhos</h2>
+  <details class="card hidden" id="devicesCard" open>
+    <summary class="fold-head"><h2>Aparelhos</h2><span class="muted" id="devicesSummary"></span></summary>
+    <div class="fold-body">
     <div id="devicesList"></div>
     <div class="row" style="margin-top:8px">
       <button class="secondary" id="btnRefresh">Atualizar</button>
@@ -245,16 +298,16 @@
         <button id="btnPair">Parear</button>
       </div>
     </div>
-  </div>
-
-  <section class="card hidden" id="overviewCard" aria-labelledby="overviewTitle">
-    <div class="overview-heading">
-      <div>
-        <h2 id="overviewTitle">Visão geral</h2>
-        <p class="muted">Resumo do aparelho selecionado, sem consultas adicionais.</p>
-      </div>
-      <span class="badge" id="overviewRole">Nenhum aparelho selecionado</span>
     </div>
+  </details>
+
+  <details class="card hidden" id="overviewCard" open>
+    <summary class="fold-head">
+      <h2 class="fold-title" id="overviewTitle">Visão geral</h2>
+      <span class="badge" id="overviewRole">Nenhum aparelho selecionado</span>
+    </summary>
+    <div class="fold-body">
+    <p class="muted">Resumo do aparelho selecionado, sem consultas adicionais.</p>
     <div class="overview-grid">
       <article class="overview-item" data-tone="success">
         <span>Conexão</span>
@@ -281,7 +334,8 @@
         <strong id="overviewAlerts">Sem dados no resumo</strong>
       </article>
     </div>
-  </section>
+    </div>
+  </details>
 
   <!-- 4. Comandos -->
   <!-- Abas (aparecem ao escolher um aparelho) -->
@@ -341,24 +395,31 @@
     </div>
     <div class="muted" id="appsCount" style="margin-top:8px"></div>
     <div id="appsList" class="apps-scroll muted" aria-live="polite">—</div>
-    <div style="margin-top:12px">
-      <button id="btnSaveApps">Salvar apps liberados</button>
+    <div class="apps-savebar hidden" id="appsSavebar" role="region" aria-label="Alterações pendentes dos apps">
+      <span id="appsPending">0 alterações não salvas</span>
+      <div class="apps-savebar-actions">
+        <button type="button" id="btnDiscardApps">Descartar</button>
+        <button type="button" id="btnSaveApps">Salvar apps liberados</button>
+      </div>
     </div>
-    <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
-    <h3 style="margin:0 0 8px;font-size:15px">Instalar um app</h3>
-    <div class="row" style="gap:8px">
-      <input id="installInput" placeholder="ID do pacote, link da Play, ou link .apk (https)"
-             style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px">
-      <button class="secondary" id="btnSearchPlay">Pesquisar na Play Store</button>
-      <button class="secondary" id="btnInstallApp">Instalar</button>
-    </div>
-    <p class="muted" style="margin-top:8px">
-      Digite o nome do app e use <b>Pesquisar na Play Store</b>. Na nova aba, escolha
-      o app e cole aqui o link da página ou o ID do pacote antes de instalar.<br>
-      <b>ID do pacote / link da Play:</b> abre a loja no celular (precisa de conta
-      Google e um toque). <b>Link .apk:</b> instala direto, sem abrir nada — só
-      funciona se o celular for Device Owner.
-    </p>
+    <details class="apps-install" id="appsInstall" open>
+      <summary><h3 style="margin:0;font-size:15px">Instalar um app</h3></summary>
+      <div class="apps-install-body">
+        <div class="row" style="gap:8px">
+          <input id="installInput" placeholder="ID do pacote, link da Play, ou link .apk (https)"
+                 style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px">
+          <button class="secondary" id="btnSearchPlay">Pesquisar na Play Store</button>
+          <button class="secondary" id="btnInstallApp">Instalar</button>
+        </div>
+        <p class="muted" style="margin-top:8px">
+          Digite o nome do app e use <b>Pesquisar na Play Store</b>. Na nova aba, escolha
+          o app e cole aqui o link da página ou o ID do pacote antes de instalar.<br>
+          <b>ID do pacote / link da Play:</b> abre a loja no celular (precisa de conta
+          Google e um toque). <b>Link .apk:</b> instala direto, sem abrir nada — só
+          funciona se o celular for Device Owner.
+        </p>
+      </div>
+    </details>
   </div>
 
   <!-- Tempo de uso -->
@@ -809,6 +870,9 @@ function selectDevice(d) {
   $('viewerNote').textContent = isGuardian
     ? '' : 'Você é observador neste aparelho: pode ver, mas não enviar comandos.';
   $('inviteArea').classList.toggle('hidden', !isGuardian);
+  // Com um aparelho escolhido, a lista recolhe; o resumo mostra qual é e permite trocar.
+  $('devicesCard').open = false;
+  $('devicesSummary').textContent = `${d.label} (${isGuardian ? 'guardião' : 'observador'}) — toque para trocar`;
   $('appsPermission').classList.toggle('hidden', isGuardian);
   $('timePermission').classList.toggle('hidden', isGuardian);
   $('inviteCode').textContent = '';
@@ -865,10 +929,16 @@ async function sendCommand(type) {
 // --- 4b. Aplicativos ------------------------------------------------------
 let deviceApps = [];
 let allowedSet = new Set();
-const openCats = new Set();   // categorias que o responsável deixou abertas
+let savedSet = new Set();     // lista como está salva no servidor (base das alterações pendentes)
+const closedCats = new Set(); // categorias que o responsável recolheu
 const CAT_LABELS = {
   game: 'Jogos', video: 'Vídeo', audio: 'Áudio', image: 'Imagens', social: 'Social',
   news: 'Notícias', maps: 'Mapas', productivity: 'Produtividade', other: 'Outros'
+};
+const OWN_PACKAGE = 'com.controleinfantil.kids';
+const CAT_ICONS = {
+  game: '🎮', video: '🎬', audio: '🎵', image: '🖼️', social: '💬',
+  news: '📰', maps: '🗺️', productivity: '🗂️', other: '📦'
 };
 const CAT_ORDER = ['game', 'video', 'audio', 'image', 'social', 'news', 'maps', 'productivity', 'other'];
 
@@ -884,6 +954,7 @@ async function loadApps() {
       deviceApps = await select(`${base}&select=package,label,allowed`);
     }
     allowedSet = new Set(deviceApps.filter(a => a.allowed).map(a => a.package));
+    savedSet = new Set(allowedSet);
     renderApps();
   } catch (e) {
     setPanelState($('appsList'), 'error', 'Não foi possível carregar os apps: ' + e.message);
@@ -896,6 +967,25 @@ function updateAppsCount() {
     ? `${allowedSet.size} liberados de ${deviceApps.length}` : '';
 }
 
+// Alterações ainda não salvas no servidor (liberações e bloqueios feitos na tela).
+function appsPendingCount() {
+  let n = 0;
+  allowedSet.forEach(p => { if (!savedSet.has(p)) n++; });
+  savedSet.forEach(p => { if (!allowedSet.has(p)) n++; });
+  return n;
+}
+
+function updateAppsBar() {
+  const n = appsPendingCount();
+  $('appsPending').textContent = n === 1 ? '1 alteração não salva' : `${n} alterações não salvas`;
+  // Só o responsável edita; observador não vê a barra.
+  $('appsSavebar').classList.toggle('hidden', !n || !canEditApps());
+}
+
+function canEditApps() {
+  return state.roles[state.selected] === 'guardian';
+}
+
 function renderApps() {
   const box = $('appsList');
   if (!deviceApps.length) {
@@ -903,6 +993,7 @@ function renderApps() {
     setPanelState(box, 'empty', 'O celular ainda não enviou a lista de apps. Abra o Controle ' +
       'Infantil na criança e aguarde alguns segundos, depois toque em "Atualizar".');
     updateAppsCount();
+    updateAppsBar();
     return;
   }
   box.classList.remove('muted');
@@ -914,69 +1005,96 @@ function renderApps() {
   const groups = {};
   filtered.forEach(a => { (groups[a.category || 'other'] = groups[a.category || 'other'] || []).push(a); });
   const cats = Object.keys(groups).sort((x, y) => CAT_ORDER.indexOf(x) - CAT_ORDER.indexOf(y));
+  const editable = canEditApps();
+  const disabled = editable ? '' : 'disabled';
 
-  // Com busca, abre todas as categorias; sem busca, lembra quais o pai abriu.
+  // Com busca, abre todas as categorias; sem busca, respeita as que o responsável recolheu.
   const searching = !!q;
   box.innerHTML = cats.length ? cats.map(cat => {
     const apps = groups[cat];
-    const rows = apps.map(a =>
-      `<label class="app-row"><span>${esc(a.label)}</span>
-         <input type="checkbox" data-pkg="${esc(a.package)}" ${allowedSet.has(a.package) ? 'checked' : ''}></label>`
-    ).join('');
-    const open = searching || openCats.has(cat) || cats.length === 1;
+    const on = apps.filter(a => allowedSet.has(a.package)).length;
+    const todosOn = on === apps.length;
+    const open = searching || !closedCats.has(cat);
+    const rows = apps.map(a => {
+      const checked = allowedSet.has(a.package);
+      // O próprio Controle Infantil não se desinstala pelo painel.
+      const uninstall = editable && a.package !== OWN_PACKAGE
+        ? `<button type="button" class="app-uninstall" data-uninstall="${esc(a.package)}"
+            aria-label="Desinstalar ${esc(a.label)} do celular">Desinstalar</button>` : '';
+      return `<div class="app-row">
+          <span class="app-name"><strong>${esc(a.label)}</strong><small>${esc(a.package)}</small></span>
+          ${uninstall}
+          <button type="button" role="switch" class="switch" aria-checked="${checked}"
+            data-pkg="${esc(a.package)}" aria-label="Liberar ${esc(a.label)}" ${disabled}></button>
+        </div>`;
+    }).join('');
     return `<details class="cat-node" data-cat="${cat}" ${open ? 'open' : ''}>
-        <summary><span class="arrow">▶</span>
-          <input type="checkbox" data-cat-toggle="${cat}" title="Marcar/desmarcar todos">
-          <span>${CAT_LABELS[cat] || cat}</span>
-          <span class="cat-count" data-cat-count="${cat}"></span></summary>
+        <summary class="cat-head">
+          <span class="ico" aria-hidden="true">${CAT_ICONS[cat] || '📦'}</span>
+          <span class="name">${CAT_LABELS[cat] || cat}</span>
+          <span class="cat-count">${on} de ${apps.length} liberados</span>
+          <button type="button" class="cat-all" data-cat-all="${cat}" ${disabled}>${todosOn ? 'Bloquear todos' : 'Liberar todos'}</button>
+        </summary>
         ${rows}</details>`;
   }).join('') : '<p class="muted" style="padding:12px 0">Nenhum app encontrado.</p>';
-
-  // Estado da caixa da categoria: marcada / desmarcada / parcial.
-  const syncCat = cat => {
-    const pkgs = groups[cat].map(a => a.package);
-    const on = pkgs.filter(p => allowedSet.has(p)).length;
-    const cb = box.querySelector(`[data-cat-toggle="${cat}"]`);
-    cb.checked = on === pkgs.length;
-    cb.indeterminate = on > 0 && on < pkgs.length;
-    box.querySelector(`[data-cat-count="${cat}"]`).textContent = `${on} de ${pkgs.length} liberados`;
-  };
-  cats.forEach(syncCat);
 
   box.querySelectorAll('details.cat-node').forEach(d => {
     d.ontoggle = () => {
       if (searching) return;
       const cat = d.getAttribute('data-cat');
-      if (d.open) openCats.add(cat); else openCats.delete(cat);
-    };
-  });
-
-  box.querySelectorAll('[data-cat-toggle]').forEach(cb => {
-    // Clicar na caixa não deve abrir/fechar a categoria.
-    cb.onclick = e => e.stopPropagation();
-    cb.onchange = () => {
-      const cat = cb.getAttribute('data-cat-toggle');
-      groups[cat].forEach(a => {
-        if (cb.checked) allowedSet.add(a.package); else allowedSet.delete(a.package);
-      });
-      box.querySelectorAll(`details[data-cat="${cat}"] [data-pkg]`)
-        .forEach(x => { x.checked = cb.checked; });
-      syncCat(cat);
-      updateAppsCount();
-    };
-  });
-
-  box.querySelectorAll('[data-pkg]').forEach(cb => {
-    cb.onchange = () => {
-      const pkg = cb.getAttribute('data-pkg');
-      if (cb.checked) allowedSet.add(pkg); else allowedSet.delete(pkg);
-      const cat = cb.closest('details').getAttribute('data-cat');
-      syncCat(cat);
-      updateAppsCount();
+      if (d.open) closedCats.delete(cat); else closedCats.add(cat);
     };
   });
   updateAppsCount();
+  updateAppsBar();
 }
+
+// Eventos delegados: a lista é redesenhada a cada mudança, então não se liga a cada elemento.
+$('appsList').addEventListener('click', e => {
+  const todos = e.target.closest('[data-cat-all]');
+  if (todos) {
+    // O botão fica dentro do cabeçalho recolhível: não deve abrir/fechar a categoria.
+    e.preventDefault();
+    if (!canEditApps()) return;
+    const cat = todos.getAttribute('data-cat-all');
+    const pkgs = deviceApps.filter(a => (a.category || 'other') === cat).map(a => a.package);
+    const tudo = pkgs.every(p => allowedSet.has(p));
+    pkgs.forEach(p => { if (tudo) allowedSet.delete(p); else allowedSet.add(p); });
+    renderApps();
+    return;
+  }
+  const uninstall = e.target.closest('[data-uninstall]');
+  if (uninstall && canEditApps()) {
+    const pkg = uninstall.getAttribute('data-uninstall');
+    const app = deviceApps.find(a => a.package === pkg);
+    // Desinstalar é irreversível pelo painel: pede confirmação explícita.
+    if (!confirm(`Desinstalar "${app ? app.label : pkg}" do celular da criança? ` +
+        'Não dá para desfazer pelo painel; para usar de novo, será preciso instalar outra vez.')) return;
+    uninstallApp(pkg);
+    return;
+  }
+  const sw = e.target.closest('[role="switch"][data-pkg]');
+  if (sw && canEditApps()) {
+    const pkg = sw.getAttribute('data-pkg');
+    if (allowedSet.has(pkg)) allowedSet.delete(pkg); else allowedSet.add(pkg);
+    renderApps();
+  }
+});
+
+async function uninstallApp(pkg) {
+  try {
+    await rpc('controller_send_command', {
+      p_device: state.selected, p_type: 'uninstall_app', p_payload: { package: pkg },
+    });
+    toast('Pedido de desinstalação enviado ✅ o celular conclui em alguns segundos');
+    setTimeout(loadApps, 8000);
+  } catch (e) { toast(e.message); }
+}
+
+$('btnDiscardApps').onclick = () => {
+  allowedSet = new Set(savedSet);
+  renderApps();
+};
 
 $('btnLoadApps').onclick = loadApps;
 $('appsSearch').oninput = renderApps;
@@ -998,6 +1116,8 @@ $('btnSaveApps').onclick = async () => {
     await rpc('controller_send_command', {
       p_device: state.selected, p_type: 'set_allowed_apps', p_payload: { packages: [...allowedSet] },
     });
+    savedSet = new Set(allowedSet);
+    updateAppsBar();
     toast('Lista enviada ✅ o celular aplica em alguns segundos');
     setTimeout(loadApps, 4000);
   } catch (e) { toast(e.message); }
@@ -1173,7 +1293,8 @@ async function unlink(controllerId) {
   try {
     await rpc('controller_unlink', { p_device: state.selected, p_controller: controllerId });
     toast('Feito ✅');
-    if (eu) { state.selected = null; loadDevices();
+    if (eu) { state.selected = null; $('devicesCard').open = true;
+      $('devicesSummary').textContent = ''; loadDevices();
       $('tabsBar').classList.add('hidden');
       ALL_TAB_CARDS.forEach(c => $(c).classList.add('hidden')); }
     else loadPeople();
