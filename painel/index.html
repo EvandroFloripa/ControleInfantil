@@ -245,6 +245,9 @@
   .fold-head::after { content: '▾'; margin-left: auto; color: var(--muted); transition: transform .15s; }
   details:not([open]) > .fold-head::after { transform: rotate(-90deg); }
   .fold-body { margin-top: 16px; }
+  .cmd-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .cmd-head h2 { margin: 0; }
+  .cmd-head button.link { white-space: nowrap; font-size: 13px; }
   .permission-note { margin: 0 0 14px; padding: 10px 12px; border-left: 4px solid var(--warning);
     background: #fff8ec; color: var(--ink); border-radius: var(--radius-sm); font-size: 13px; line-height: 1.5; }
   @media (prefers-reduced-motion: reduce) {
@@ -380,7 +383,10 @@
   </div>
 
   <div class="card hidden" id="commandsCard">
-    <h2>Comandos — <span id="selectedLabel"></span></h2>
+    <div class="cmd-head">
+      <h2>Comandos — <span id="selectedLabel"></span></h2>
+      <button id="btnCopyConfig" class="link" type="button">Copiar configuração</button>
+    </div>
     <div class="command-groups">
       <section class="command-group" data-command-group="protection">
         <h3>Proteção</h3>
@@ -404,6 +410,8 @@
         <div class="command-grid">
           <button data-cmd="start_checkin">🎥 Ver e ouvir (check-in)</button>
           <button data-cmd="start_screen_view">🖥️ Ver a tela</button>
+          <button data-cmd="wake_screen">💡 Acordar a tela</button>
+          <button id="btnToggleControl" class="secondary" disabled>Controle</button>
         </div>
       </section>
     </div>
@@ -806,7 +814,7 @@ function renderOverview(device, role) {
     protection: role === 'guardian' ? 'Gerenciamento completo' : 'Somente leitura',
     usage: 'Consulte a aba Tempo de uso',
     location: 'Consulte a aba Localização',
-    alerts: 'Não disponível na lista de aparelhos',
+    alerts: 'Verificando…',
   } : {
     role: 'Nenhum aparelho selecionado',
     connection: 'Selecione um aparelho',
@@ -922,6 +930,13 @@ function selectDevice(d) {
    'timeEnabled', 'timeStart', 'timeEnd', 'timeLimit', 'btnSaveTime', 'appsSearch']
     .forEach(id => { $(id).disabled = !isGuardian; });
   document.querySelectorAll('[data-grant]').forEach(b => { b.disabled = !isGuardian; });
+  $('btnToggleControl').disabled = !isGuardian;
+  $('btnCopyConfig').disabled = !isGuardian;
+  // Mantém o estado do controle atualizado enquanto o aparelho está selecionado.
+  clearInterval(state.controlTimer);
+  state.controlTimer = setInterval(refreshControlState, 15000);
+  // Alerta da visão geral: "verificando" até o aparelho reportar o estado.
+  $('overviewAlerts').textContent = 'Verificando…';
   $('viewerNote').textContent = isGuardian
     ? '' : 'Você é observador neste aparelho: pode ver, mas não enviar comandos.';
   $('inviteArea').classList.toggle('hidden', !isGuardian);
@@ -967,9 +982,62 @@ document.querySelectorAll('[data-cmd]').forEach(btn => {
   btn.onclick = () => sendCommand(btn.getAttribute('data-cmd'));
 });
 
+// Copia apps liberados e limites de tempo de outro aparelho em que você é guardião.
+async function copyConfiguration() {
+  if (!state.selected) return toast('Escolha um aparelho de destino');
+  if (state.roles[state.selected] !== 'guardian') {
+    return toast('Você precisa ser guardião do aparelho de destino');
+  }
+  const sources = state.devices.filter(d =>
+    d.id !== state.selected && state.roles[d.id] === 'guardian');
+  if (!sources.length) return toast('Não há outro aparelho configurado para copiar');
+
+  const options = sources.map((d, i) => `${i + 1}. ${d.label}`).join('\n');
+  const choice = Number(prompt('Copiar configuração de qual aparelho?\n\n' + options));
+  const source = sources[choice - 1];
+  if (!source) return;
+  const target = state.devices.find(d => d.id === state.selected);
+  if (!confirm(`Copiar aplicativos e limites de tempo de “${source.label}” para “${target?.label || 'este aparelho'}”?`)) return;
+
+  try {
+    const [apps, statuses] = await Promise.all([
+      select(`device_apps?device_id=eq.${source.id}&select=package,allowed`),
+      select(`device_status?device_id=eq.${source.id}` +
+        '&select=time_enabled,start_minute,end_minute,daily_limit_minutes'),
+    ]);
+    const packages = apps.filter(a => a.allowed && a.package).map(a => a.package);
+    const commands = [{ type: 'set_allowed_apps', payload: { packages } }];
+    const status = statuses[0];
+    if (status) {
+      commands.push({
+        type: 'set_time_rules',
+        payload: {
+          enabled: Boolean(status.time_enabled),
+          start: Number(status.start_minute ?? 480),
+          end: Number(status.end_minute ?? 1200),
+          limit: Number(status.daily_limit_minutes ?? 0),
+        },
+      });
+    }
+    for (const c of commands) {
+      await rpc('controller_send_command', {
+        p_device: state.selected, p_type: c.type, p_payload: c.payload,
+      });
+    }
+    toast(status
+      ? 'Configuração copiada ✅ o celular aplica em alguns segundos'
+      : 'Apps copiados ✅ (sem limites de tempo salvos)');
+    setTimeout(() => { loadApps(); loadStatus(false); }, 4000);
+  } catch (e) { toast('Não foi possível copiar: ' + e.message); }
+}
+
+$('btnCopyConfig').onclick = copyConfiguration;
+
 async function sendCommand(type) {
   if (!state.selected) return toast('Escolha um aparelho');
   if (type === 'reboot' && !confirm('Reiniciar o aparelho agora?')) return;
+  if (type === 'resume_control' && !confirm('Reativar o controle do aparelho agora? Horário, limite e bloqueio voltam a valer.')) return;
+  if (type === 'disable_control' && !confirm('Desativar o controle? O aparelho fica totalmente liberado até você reativar.')) return;
   // Check-in e ver a tela abrem o visualizador WebRTC (payload com session_id).
   if (type === 'start_checkin' || type === 'start_screen_view') {
     return startViewer(type);
@@ -978,6 +1046,7 @@ async function sendCommand(type) {
     await rpc('controller_send_command', { p_device: state.selected, p_type: type });
     toast('Comando enviado ✅');
     setTimeout(loadHistory, 800);
+    setTimeout(refreshControlState, 3000);
   } catch (e) { toast(e.message); }
 }
 
@@ -1235,6 +1304,7 @@ async function loadStatus(resetForm) {
         'O celular ainda não aplicou/enviou o status. Verifique se o app está instalado ' +
         'e pareado; deve aparecer em alguns segundos.');
       $('timeMeter').classList.add('hidden');
+      renderControlState();
       if (resetForm) applyTimeDefaults();
     }
   } catch (e) {
@@ -1288,7 +1358,39 @@ function renderStatus() {
   $('timeOverride').textContent = ate && ate > new Date()
     ? `Tempo extra liberado até ${ate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
     : '';
+  renderControlState();
 }
+
+// Estado do controle: alerta na visão geral e o botão que alterna entre reativar e desativar.
+function renderControlState() {
+  const alerta = $('overviewAlerts');
+  const btn = $('btnToggleControl');
+  if (!deviceStatus) {
+    alerta.textContent = 'Sem dados do aparelho';
+    btn.textContent = 'Controle';
+    return;
+  }
+  const desativado = deviceStatus.control_disabled === true;
+  alerta.textContent = desativado
+    ? '⚠️ Controle desativado: todos os apps liberados'
+    : 'Nenhum alerta';
+  const cartao = alerta.parentElement;
+  if (cartao) cartao.setAttribute('data-tone', desativado ? 'warning' : 'success');
+  btn.textContent = desativado ? '🔓 Reativar controle' : '⏸️ Desativar controle';
+}
+
+// Atualiza só o estado do controle (não mexe no formulário de horários).
+async function refreshControlState() {
+  if (!state.selected) return;
+  try {
+    const rows = await select(`device_status?device_id=eq.${state.selected}&select=control_disabled`);
+    if (rows[0]) deviceStatus = { ...(deviceStatus || {}), control_disabled: rows[0].control_disabled };
+    renderControlState();
+  } catch { /* a próxima leitura tenta de novo */ }
+}
+
+$('btnToggleControl').onclick = () =>
+  sendCommand(deviceStatus?.control_disabled === true ? 'resume_control' : 'disable_control');
 
 document.querySelectorAll('[data-grant]').forEach(btn => {
   btn.onclick = async () => {

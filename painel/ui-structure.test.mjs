@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
 const commandTypes = [
   'lock_screen', 'reboot', 'enable_location', 'request_location',
-  'start_checkin', 'start_screen_view',
+  'start_checkin', 'start_screen_view', 'wake_screen',
 ];
 
 function inlineClassicScript() {
@@ -319,6 +319,11 @@ test('shows the daily usage meter against the daily limit', () => {
   });
   assert.equal(harness.elements.get('timeMeterValue').textContent, '50 min de 60 min');
   assert.equal(harness.elements.get('timeMeterBar').getAttribute('data-warn'), 'true');
+});
+
+test('keeps the copy-configuration action in the commands header', () => {
+  assert.match(html, /id="btnCopyConfig"/);
+  assert.match(html, /class="cmd-head"[\s\S]*?id="btnCopyConfig"/);
 });
 
 test('renders viewer device cards without an unlink control', () => {
