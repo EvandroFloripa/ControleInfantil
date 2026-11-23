@@ -32,10 +32,10 @@ jobs:
         env:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_HOST: ${{ secrets.FTP_SERVER }}
         run: |
           if [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ] || [ -z "$FTP_HOST" ]; then
-            echo "::error::Faltam FTP_USERNAME, FTP_PASSWORD ou FTP_HOST."
+            echo "::error::Faltam FTP_USERNAME, FTP_PASSWORD ou FTP_SERVER."
             exit 1
           fi
           echo "FTP_HOST_SECRET=$FTP_HOST" >> "$GITHUB_ENV"
