@@ -63,7 +63,7 @@ Não pertencem a nenhum lote do plano de entrega e não foram revisadas nesta et
 
 ## 6. Checkpoint do Coordenador — 2026-11-23
 
-- Sincronização: estado acima conferido contra Git (`8005f54` é o último commit; `painel/` tem apenas alterações da Task 2, não commitadas).
+- Sincronização: estado acima conferido contra Git. Último commit `fd5850e`. Task 2 está em `1af4aeb` e a árvore não tem alterações pendentes em `painel/`. Commits posteriores do painel (`0a9eaef` alternar controle/alerta/copiar configuração, `c416858` e `fd5850e` publicação do painel) não são lotes do plano e não alteram o status acima. `node --test painel/*.test.mjs` passou 24/24 nesta checagem (as seções 2 e 8 registram 15/15 de antes desses commits).
 - Fila: nenhum lote `LIVRE` elegível. LOTE-05 está concluído e revisado, mas com aceite visual pendente. LOTE-06 depende dele e o plano não o libera para implementação de interface antes desse aceite. LOTE-01, 02, 03, 04 e 07 seguem bloqueados ou aguardando decisão humana.
 - Classificação de LOTE-06: **PARCIAL** (implementação e testes estruturais feitos; Task 3 e aceite visual pendentes). Não fechado.
 - Parada: backlog liberado esgotado; decisão humana obrigatória (aceite visual, decisão de infra, aprovações de LOTE-01 e LOTE-03). Nenhum lote novo iniciado.
