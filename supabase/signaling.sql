@@ -20,7 +20,7 @@ alter table public.commands add constraint commands_type_check
         'lock_screen', 'reboot', 'enable_location', 'request_location',
         'start_screen_view', 'start_checkin',
         'stop_screen_view', 'stop_checkin',
-        'set_allowed_apps', 'install_app',
+        'set_allowed_apps', 'install_app', 'uninstall_app',
         'set_time_rules', 'grant_time'));
 
 create table if not exists public.signals (
